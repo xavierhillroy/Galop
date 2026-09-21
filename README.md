@@ -1,6 +1,6 @@
-# GALOP — warp-per-individual GPU linear genetic programming
+# Galop — warp-per-individual GPU linear genetic programming
 
-GALOP is a hybrid CPU–GPU linear genetic programming (LGP) system built around one
+Galop is a hybrid CPU–GPU linear genetic programming (LGP) system built around one
 design decision: **one individual per CUDA warp**. The 32 lanes of a warp execute the
 same program over 32 fitness cases in lockstep, population parallelism is exposed
 across warps, and selection and variation stay on the CPU. This repository contains
