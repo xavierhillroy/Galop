@@ -1,0 +1,27 @@
+system,P,outcome,wall_process_s,evolve_s,node,date,note
+kozax,20000,OK,78,,,2026-08-31,ompatible with the installed jaxlib version 0.11.1 so it will not be used.  warnings.warn(
+kozax,24000,OK,73,,,2026-08-31,ompatible with the installed jaxlib version 0.11.1 so it will not be used.  warnings.warn(
+kozax,28000,OK,76,,,2026-08-31,ompatible with the installed jaxlib version 0.11.1 so it will not be used.  warnings.warn(
+kozax,32000,OK,74,,,2026-08-31,ompatible with the installed jaxlib version 0.11.1 so it will not be used.  warnings.warn(
+kozax,36000,OK,87,,,2026-08-31,ompatible with the installed jaxlib version 0.11.1 so it will not be used.  warnings.warn(
+kozax,40000,OK,90,,,2026-08-31,ompatible with the installed jaxlib version 0.11.1 so it will not be used.  warnings.warn(
+kozax,60000,OOM_DEVICE,138,,,2026-09-01,te 60.43GiB. [executable_name='jit_simplify_constants'] [tf-allocator-allocation-error='']
+srgpu,4000000,OK,248,,g2.nibi.sharcnet,2026-09-21,init_depth 4-7 best: ((x0 + (x0 * x0)) * (x0 - -0.862682))
+srgpu,8000000,OK,497,,g2.nibi.sharcnet,2026-09-21,init_depth 4-7 best: (((x0 * x0) + x0) / sin((-0.285166 + cos((sin(x0) / (1.330722 / x0))))))
+srgpu,16000000,OK,982,,g2.nibi.sharcnet,2026-09-21,init_depth 4-7 23624)) / ((x0 * x0) / (x0 * x0))) * (((x0 / x0) + (x0 + x0)) * sin((x0 + x0))))
+srgpu,32000000,TIMEOUT,1202,,g2.nibi.sharcnet,2026-09-21,init_depth 4-7 
+evogp,4000000,OK,0.9,,,2026-08-31,
+evogp,8000000,OK,0.3,,,2026-08-31,
+evogp,16777216,OK,0.6,,,2026-08-31,
+evogp,33554432,CRASH_framework,0,,,2026-08-31,number of categories cannot exceed 2^24
+beagle,400000000,OK,100.931,,,2026-08-31,
+beagle,480000000,OK,137.490,,,2026-08-31,
+beagle,536000000,OK,138.478,,,2026-08-31,
+beagle,560000000,DIED_rc=134,0,,,2026-08-31,.Program.Main(String[] args) in /home/hillroyx/beagle_stock/Beagle/Run/Program.cs:line 155
+galop_packed,1400000000,OK,713,572.562,g1.nibi.sharcnet,2026-09-20,MAX_GENERATIONS=2; BREAKDOWN warp: total=572.562s eval=32.371s (5.7%) host+other=540.191s
+galop_packed,1800000000,OOM_DEVICE,1014,,,2026-09-01,"OOM when the device instruction buffer is first sized for the initial population, before any generation completes (generation-count independent); GPUassert: out of memory src/EvaluatorCuda.cu 77"
+galop_eff,1800000000,OK,1091,788.867,g1.nibi.sharcnet,2026-09-20,MAX_GENERATIONS=2; BREAKDOWN warp: total=788.867s eval=34.771s (4.4%) host+other=754.095s
+galop_eff,2100000000,OK,1140,847.497,g1.nibi.sharcnet,2026-09-20,MAX_GENERATIONS=2; BREAKDOWN warp: total=847.497s eval=35.787s (4.2%) host+other=811.710s
+galop_eff,2147483646,OK,1112,857.034,g1.nibi.sharcnet,2026-09-20,MAX_GENERATIONS=2; BREAKDOWN warp: total=857.034s eval=43.421s (5.1%) host+other=813.613s
+galop_eff,2147483647,BUILD_FAIL,0,,,2026-09-03,"TE_COUNT % 2 == 0      ^2 errors detected in the compilation of ""tests/cuda_evo_bench.cu""."
+galop_eff,2200000000,INT32_WALL,0,,,2026-09-03,POPULATION_SIZE is constexpr int

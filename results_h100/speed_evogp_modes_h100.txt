@@ -1,0 +1,3 @@
+P=10000 D=1024: auto=0.6ms hybrid parallel=0.6ms data parallel=117.1ms tree parallel=64.9ms
+P=1000000 D=32768: auto=12624.8ms hybrid parallel=1935.8ms data parallel=12646.1ms tree parallel=48834.2ms
+P=1000000 D=131072: auto=13002.4ms hybrid parallel=7740.3ms data parallel=13002.5ms tree parallel=195468.9ms

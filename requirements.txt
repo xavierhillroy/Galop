@@ -1,0 +1,8 @@
+# Analysis path (numbers, figures, dataset generation, CPU anchor). Python 3.12.
+numpy==2.5.0
+scipy==1.18.0
+matplotlib==3.11.0
+scikit-learn==1.9.0
+gplearn==0.4.3
+# The EvoGP arms additionally need torch (paper: 2.9.0+cu130 from the PyTorch CUDA
+# index) and EvoGP built from source at commit 5538d75 -- see REPRODUCE.md.

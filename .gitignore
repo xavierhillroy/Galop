@@ -1,0 +1,16 @@
+# build products
+build/
+cuda_diff
+cuda_evo_bench
+cuda_capacity
+lgp_test
+lgp_run
+gen_datasets
+gen_sweep_datasets
+*.o
+*.d
+__pycache__/
+*.pyc
+.venv/
+# per-run scratch written by the scripts
+results/one_cell_check_*

@@ -1,0 +1,21 @@
+==PROF== Connected to process 72728 (/home/xavier/dev/ribox/parallel-GPU/cuda_diff_occ)
+Device count, devid: 1 0
+Device: NVIDIA GeForce RTX 5070 Ti
+Capability: 12.0
+Maximum treads per block: 1024
+Maximum block grid dimensions: 2147483647 x 65535 x 65535
+
+Population: 100000 programs | dataset N=32 num_inputs=1
+CPU fitness: 100000/100000 programs > 0, max = 0.940191
+[warp/dense    ] max |Δ| = 1.132e-06 at prog 72860 (cpu=0.3376042 gpu=0.3376031)  0/100000 over TOL  -> PASS
+[warp/packed   ] max |Δ| = 1.132e-06 at prog 72860 (cpu=0.3376042 gpu=0.3376031)  0/100000 over TOL  -> PASS
+[warp/effect   ] max |Δ| = 1.132e-06 at prog 72860 (cpu=0.3376042 gpu=0.3376031)  0/100000 over TOL  -> PASS
+[block/dense   ] max |Δ| = 1.132e-06 at prog 72860 (cpu=0.3376042 gpu=0.3376031)  0/100000 over TOL  -> PASS
+[block/packed  ] max |Δ| = 1.132e-06 at prog 72860 (cpu=0.3376042 gpu=0.3376031)  0/100000 over TOL  -> PASS
+[dense==packed ] BITWISE IDENTICAL -> PASS
+[packed==effect] BITWISE IDENTICAL -> PASS
+[blk dns==pckd ] BITWISE IDENTICAL -> PASS
+QUICK PASS (phase 1 only)
+==PROF== Disconnected from process 72728
+"ID","Process ID","Process Name","Host Name","Kernel Name","Context","Stream","Block Size","Grid Size","Device","CC","Section Name","Metric Name","Metric Unit","Metric Value"
+"0","72728","cuda_diff_occ","127.0.0.1","evaluate_kernel(const unsigned int *, const unsigned char *, float *, const float *, const float *, int, int, int, int, double)","1","7","(256, 1, 1)","(12500, 1, 1)","0","12.0","Command line profiler metrics","sm__warps_active.avg.pct_of_peak_sustained_active","%","82.20"

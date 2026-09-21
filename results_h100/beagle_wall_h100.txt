@@ -1,0 +1,18 @@
+=== BEAGLE WALL DIAGNOSTIC: colony 5.6e8, D=64, no time pressure ===
+exit code: 134
+host budget (cgroup bytes):    [ladder ran at 250G]
+peak host RSS: 
+--- last 30 lines of stdout ---
+GALOP-adapter: CsvMLSetup + fitfunc=corr
+g18: Running CsvMLSetup-nguyen1_D64_train-CorrelationFitFunc on 16 CPU(s) & 1 NVIDIA H100 80GB HBM3 GPU(s) @ 1.00000 target ASR
+--- stderr (failure signature) ---
+Unhandled exception. System.OverflowException: Arithmetic operation resulted in an overflow.
+   at BeagleLib.Engine.MLSetup.get_OrganismsArraySize() in /home/hillroyx/beagle_stock/Beagle/BeagleLib/Engine/MLSetup.cs:line 58
+   at BeagleLib.Engine.MLEngine`2..ctor(Boolean forceCPUAccelerator, Boolean useSingleAccelerator, Boolean useLibDevice, IMLEngineNotificationsHandler mlEngineNotificationsHandler) in /home/hillroyx/beagle_stock/Beagle/BeagleLib/Engine/MLEngine.cs:line 139
+   at Run.Program.Main(String[] args) in /home/hillroyx/beagle_stock/Beagle/Run/Program.cs:line 155
+--- last 3 samples (rss / device memory) ---
+1788204519 rss_kB=0 gpu=0
+1788204521 rss_kB=192028 gpu=527
+--- host memory ---
+               total        used        free      shared  buff/cache   available
+Mem:            2015         245         195           1        1574        1753

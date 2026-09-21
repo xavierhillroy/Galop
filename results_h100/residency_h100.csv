@@ -1,0 +1,12 @@
+P,outcome,eval_ms,evals_per_s,note
+16000000,OK,13.8,1.160e+09,lower-rung sweep of the same probe
+64000000,OK,55.1,1.161e+09,lower-rung sweep of the same probe
+256000000,OK,220.6,1.161e+09,lower-rung sweep of the same probe
+1024000000,OK,882.3,1.161e+09,lower-rung sweep of the same probe
+2048000000,OK,1792.1,1.143e+09,
+2200000000,OK,1919.9,1.146e+09,
+2300000000,OK,2007.5,1.146e+09,
+2400000000,OK,2094.8,1.146e+09,
+2500000000,OK,2182.2,1.146e+09,
+2560000000,OK,2234.5,1.146e+09,
+2700000000,FAIL_rc2,,,out of memory tests/cuda_capacity.cu 107
