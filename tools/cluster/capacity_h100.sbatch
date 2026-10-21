@@ -18,6 +18,42 @@
 #           layouts: packed (rungs 1.0e9, 1.4e9, 1.8e9) and intron-removed via
 #           GALOP_EFF_LOG (rungs 1.4e9, 1.8e9, 2.1e9, 2^31-2, then the engine's
 #           own walls recorded in-file: 2^31-1 BUILD_FAIL, 2.2e9 INT32_WALL).
+#   GALOP at cap width (systems galop_packed_cap50 / galop_eff_cap50): the same
+#           ladders with every program initialized at the 50-instruction cap
+#           (-DSTARTING_PROGRAM_SIZE_OVERRIDE=50), i.e. the largest footprint the
+#           configuration allows, so that GALOP's ceilings are also reported at
+#           the cap width EvoGP and Kozax pay for every individual; packed rungs
+#           2e8, 3e8, 3.5e8, 4e8, 5e8; intron-removed 1.4e9, 1.8e9, 2.1e9, 2^31-2.
+#           Reported as an additional, labelled arm — never replaces the
+#           initializer arm.
+#   Sustained generations at the ceiling (system galop_eff_10gen; STAGE=sustain
+#           only, never part of 'all'): the intron-removed ceiling rung 2^31-2 run
+#           for TEN true generations (MAX_GENERATIONS_OVERRIDE=11) under the same
+#           build, data, host memory and threads. Instruments, none touching the
+#           engine: GALOP_EFF_LOG (per-generation instruction totals, written by
+#           the bench at the end of the run), GALOP_PHASE_TIMERS (host phase totals
+#           printed once at the end, stderr), and nvidia-smi sampling device memory
+#           every 10 s into a .gpumem trace — the only live one: a run that dies
+#           mid-way leaves the trace, the .err and the SLURM log. Cap 27,000 s
+#           (7.5 h): submit with --time=08:00:00. Answers whether the ceiling is a
+#           working population or a first-generation upper bound.
+#   Host-thread robustness row (system galop_eff_cap50_<T>thr; STAGE=cap50thr only,
+#           never part of 'all'): the at-cap intron-removed ladder again from 1.8e9
+#           (1.8e9, 2.1e9, 2^31-2) with T host threads instead of the criterion's 16
+#           (THREADS=T, submitted with --cpus-per-task=T; the job refuses a mismatch).
+#           Tests whether the time-bound at-cap ceiling is the host's; the criterion
+#           rows above stay at 16 threads. The packed at-cap ladder is memory-bound
+#           and is not repeated.
+#   Parallel-initializer check (STAGE=pinit only, never part of 'all'): the ceiling rung
+#           2^31-2 once with the shipped serial initializer (system galop_eff_sinit, a
+#           same-node control with the memory trace) and once built with
+#           -DGALOP_PARALLEL_INIT (galop_eff_pinit): one true generation each, the
+#           10 s nvidia-smi trace dating the time to the first evaluation. The flag
+#           changes initialization only (per-program PCG32 streams in an OpenMP loop,
+#           buffers allocated without the zero pass); its population is a different
+#           random population, so the flag is never mixed with the shipped results.
+#           ~45 min:  sbatch --export=ALL,STAGE=pinit tools/cluster/capacity_h100.sbatch
+# STAGE = evogp | kozax | beagle | srgpu | galop | cap50 | all (default) | sustain | cap50thr | pinit.
 #   SRGPU   retained snapshot, SRGPU_DEPTH=7 (parity cap), initialization capped
 #           at the same depth (harness default since 2026-09-20), forced rebuild
 #           + binary guard; rungs 4e6, 8e6, 16e6, 32e6.
@@ -34,7 +70,10 @@
 #      system,P,outcome,wall_process_s,evolve_s,node,date,note   (evolve_s: GALOP only)
 #    per-rung stdout/stderr in results_h100/capacity_logs/
 # Submit from the login node at the repo root:  sbatch tools/cluster/capacity_h100.sbatch
-# Runtime: ~3 h (GALOP ~100 min, SRGPU ~50 min, Beagle ~15 min, Kozax/EvoGP minutes).
+# Runtime: ~4.5 h for all (GALOP ~100 min + cap-width arm ~90 min, SRGPU ~50 min, Beagle
+# ~15 min, Kozax/EvoGP minutes); the cap-width arm alone:  sbatch --export=ALL,STAGE=cap50 tools/cluster/capacity_h100.sbatch
+# STAGE=sustain alone (~3 h):  sbatch --time=08:00:00 --export=ALL,STAGE=sustain tools/cluster/capacity_h100.sbatch
+# STAGE=cap50thr (~1 h):       sbatch --cpus-per-task=48 --export=ALL,STAGE=cap50thr,THREADS=48 tools/cluster/capacity_h100.sbatch
 # =============================================================================
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=1000G
@@ -46,9 +85,11 @@
 set -uo pipefail
 cd "$SLURM_SUBMIT_DIR"
 module load StdEnv/2023 python/3.11 cuda/13.2 cmake 2>/dev/null || module load StdEnv/2023 python/3.11 cuda cmake
-NVCC=$(command -v nvcc); export OMP_NUM_THREADS=16
-NODE=$(hostname); DATE=$(date +%F)
-echo "NODE: $NODE"; free -g | head -2; nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
+NVCC=$(command -v nvcc); THREADS=${THREADS:-16}; export OMP_NUM_THREADS=$THREADS   # 16 = the criterion; other values only for the labelled cap50thr stage
+[ "${SLURM_CPUS_PER_TASK:-$THREADS}" = "$THREADS" ] || { echo "THREADS=$THREADS but the allocation has ${SLURM_CPUS_PER_TASK} cpus: submit with --cpus-per-task=$THREADS"; exit 1; }
+NODE=$(hostname); DATE=$(date +%F); STAGE=${STAGE:-all}
+run_stage() { [ "$STAGE" = all ] || [ "$STAGE" = "$1" ]; }
+echo "NODE: $NODE  STAGE: $STAGE"; free -g | head -2; nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 echo "ENGINE: $(git rev-parse HEAD) $(git status --short src tests tools | wc -l) local modifications in src/tests/tools"
 mkdir -p results_h100/capacity_logs datasets/gridsynth
 python3 - <<'GSEOF'
@@ -78,6 +119,7 @@ classify() {   # RC ERRFILE -> outcome word (shared by GALOP, SRGPU, Kozax)
 }
 
 # ============================ EvoGP (one pipeline step) ============================
+if run_stage evogp; then
 echo "=== EvoGP ==="
 source .venv_cluster/bin/activate 2>/dev/null
 NODE=$NODE DATE=$DATE .venv_cluster/bin/python - <<'PYEOF'
@@ -112,8 +154,10 @@ for P in (4000000, 8000000, 16777216, 33554432):
         torch.cuda.empty_cache(); break
 PYEOF
 deactivate 2>/dev/null || true
+fi
 
 # ============================ Kozax (one generation, 101-node parity cap) ============================
+if run_stage kozax; then
 echo "=== Kozax ==="
 source ~/.venv_kozax/bin/activate
 export KOZAX_MAX_NODES=101 KOZAX_OPS=8
@@ -128,8 +172,10 @@ if python -c "import jax; assert any('cuda' in str(d).lower() or 'gpu' in str(d)
   done
 else echo "kozax env: no GPU — skipped"; fi
 deactivate 2>/dev/null || true
+fi
 
 # ============================ Beagle (one generation, EPG 64) ============================
+if run_stage beagle; then
 echo "=== Beagle ==="
 DLL=$HOME/beagle_stock/Beagle/Run/bin/Release/net10.0/Run.dll
 if grep -q "GALOP-adapter" $HOME/beagle_stock/Beagle/Run/Program.cs 2>/dev/null; then
@@ -143,8 +189,10 @@ if grep -q "GALOP-adapter" $HOME/beagle_stock/Beagle/Run/Program.cs 2>/dev/null;
     esac
   done
 else echo "beagle adapter missing — section skipped"; fi
+fi
 
 # ============================ SRGPU (one generation, initialization under the cap) ============================
+if run_stage srgpu; then
 echo "=== SRGPU ==="
 SRC=$HOME/galop_srgpu_src
 if [ -d $SRC ]; then
@@ -171,31 +219,75 @@ CM
     echo "  srgpu P=$P -> $O (${W}s)"; [ "$O" = "OK" ] || break
   done
 else echo "srgpu snapshot missing — skipped"; fi
+fi
 
 # ============================ GALOP (one TRUE generation, both layouts) ============================
+if run_stage galop || run_stage cap50 || run_stage sustain || run_stage cap50thr || run_stage pinit; then
 echo "=== GALOP: gates ==="; make gpu 2>&1 | tail -1
 GALOP_DIFF_QUICK=1 ./cuda_diff | tail -1 || { echo "GATE FAILED"; exit 1; }
+fi
 SRCS="tests/cuda_evo_bench.cu src/EvaluatorCuda.cu src/Dataset.cpp src/LGPEngine.cpp src/EvaluatorCpu.cpp src/Evaluator.cpp src/Interpreter.cpp"
 NVF="-std=c++20 --expt-relaxed-constexpr -O2 -Isrc -arch=native -Xcompiler -fopenmp -DGALOP_STANDARD"
-rung() {   # rung MODE P -> one CSV row; echoes the outcome word
-  local MODE=$1 P=$2 SYS=galop_$1
-  done_row $SYS $P && { echo "  $SYS P=$P SKIP (done)"; grep "^$SYS,$P," $CSV | cut -d, -f3; return; }
+EXTRA=""; SUFFIX=""; GENS=2; RCAP=$CAP; THR_NOTE=""; XNOTE=""   # cap-width arm sets EXTRA/SUFFIX/XNOTE; sustain sets GENS (MAX_GENERATIONS), RCAP (its cap), SUFFIX; cap50thr sets THR_NOTE; pinit sets EXTRA/SUFFIX/XNOTE
+rung() {   # rung MODE P -> one CSV row; progress lines go to the log; the outcome is read back from the CSV by last()
+  local MODE=$1 P=$2 SYS=galop_$1$SUFFIX
+  done_row $SYS $P && { echo "  $SYS P=$P SKIP (done: $(grep "^$SYS,$P," $CSV | tail -1 | cut -d, -f3))"; return; }
   if [ "$P" -gt 2147483647 ]; then
-    echo "$SYS,$P,INT32_WALL,0,,$NODE,$DATE,POPULATION_SIZE is constexpr int: beyond 2^31-1 the engine cannot be built" >> $CSV; echo INT32_WALL; return; fi
-  local bin=/tmp/ceb_final_${MODE}_$P ERR=$LOGD/${MODE}_${P}.err
-  if ! $NVCC $NVF -DPOPULATION_SIZE_OVERRIDE=$P -DMAX_GENERATIONS_OVERRIDE=2 $SRCS -o $bin 2>$ERR; then
-    echo "$SYS,$P,BUILD_FAIL,0,,$NODE,$DATE,$(tr -d ',\n' < $ERR | tail -c 90)" >> $CSV; echo BUILD_FAIL; return; fi
-  if [ "$MODE" = eff ]; then export GALOP_EFF_LOG=$LOGD/${MODE}_${P}.efflog; else unset GALOP_EFF_LOG; fi
-  local T0=$(date +%s); timeout $CAP $bin $TR 70 warp >$LOGD/${MODE}_${P}.out 2>$ERR; local RC=$?; local W=$(( $(date +%s) - T0 ))
+    echo "$SYS,$P,INT32_WALL,0,,$NODE,$DATE,POPULATION_SIZE is constexpr int: beyond 2^31-1 the engine cannot be built" >> $CSV; echo "  $SYS P=$P -> INT32_WALL"; return; fi
+  local bin=/tmp/ceb_final_${MODE}${SUFFIX}_$P ERR=$LOGD/${MODE}${SUFFIX}_${P}.err
+  if ! $NVCC $NVF $EXTRA -DPOPULATION_SIZE_OVERRIDE=$P -DMAX_GENERATIONS_OVERRIDE=$GENS $SRCS -o $bin 2>$ERR; then
+    echo "$SYS,$P,BUILD_FAIL,0,,$NODE,$DATE,$(tr -d ',\n' < $ERR | tail -c 90)" >> $CSV; echo "  $SYS P=$P -> BUILD_FAIL (see $ERR)"; return; fi
+  if [ "$MODE" = eff ]; then export GALOP_EFF_LOG=$LOGD/${MODE}${SUFFIX}_${P}.efflog; else unset GALOP_EFF_LOG; fi
+  local T0=$(date +%s); timeout $RCAP $bin $TR 70 warp >$LOGD/${MODE}${SUFFIX}_${P}.out 2>$ERR; local RC=$?; local W=$(( $(date +%s) - T0 ))
   local O=$(classify $RC $ERR)
   local EV=$(grep -o 'total=[0-9.]*' $ERR | tail -1 | cut -d= -f2); EV=${EV:-0}
-  echo "$SYS,$P,$O,$W,$EV,$NODE,$DATE,MAX_GENERATIONS=2 $(tr -d ',\n' < $ERR | tail -c 100)" >> $CSV
-  echo "  $SYS P=$P -> $O (process ${W}s, evolve ${EV}s)"; rm -f $bin; echo $O
+  echo "$SYS,$P,$O,$W,$EV,$NODE,$DATE,MAX_GENERATIONS=$GENS$XNOTE$THR_NOTE $(tr -d ',\n' < $ERR | tail -c 100)" >> $CSV
+  echo "  $SYS P=$P -> $O (process ${W}s, evolve ${EV}s)"; rm -f $bin
 }
+last() { grep "^galop_$1$SUFFIX,$2," $CSV | tail -1 | cut -d, -f3; }   # outcome word of the (mode, P) row
+if run_stage galop; then
 echo "=== GALOP packed ==="
-for P in 1000000000 1400000000 1800000000; do r=$(rung packed $P | tail -1); [ "$r" = OK ] || break; done
+for P in 1000000000 1400000000 1800000000; do rung packed $P; [ "$(last packed $P)" = OK ] || break; done
 echo "=== GALOP intron-removed ==="
-for P in 1400000000 1800000000 2100000000 2147483646; do r=$(rung eff $P | tail -1); [ "$r" = OK ] || break; done
-[ "$r" = OK ] && { rung eff 2147483647 >/dev/null; rung eff 2200000000 >/dev/null; }   # the engine's own walls, recorded in-file
+for P in 1400000000 1800000000 2100000000 2147483646; do rung eff $P; [ "$(last eff $P)" = OK ] || break; done
+[ "$(last eff 2147483646)" = OK ] && { rung eff 2147483647; rung eff 2200000000; }   # the engine's own walls, recorded in-file
 unset GALOP_EFF_LOG
+fi
+if run_stage cap50; then
+EXTRA="-DSTARTING_PROGRAM_SIZE_OVERRIDE=50"; SUFFIX="_cap50"; XNOTE=" STARTING_PROGRAM_SIZE=50"
+echo "=== GALOP at cap width: packed ==="
+for P in 200000000 300000000 350000000 400000000 500000000; do rung packed $P; [ "$(last packed $P)" = OK ] || break; done
+echo "=== GALOP at cap width: intron-removed ==="
+for P in 1400000000 1800000000 2100000000 2147483646; do rung eff $P; [ "$(last eff $P)" = OK ] || break; done
+unset GALOP_EFF_LOG; EXTRA=""; SUFFIX=""; XNOTE=""
+fi
+if run_stage cap50thr; then
+[ "$THREADS" != 16 ] || { echo "cap50thr is the host-thread robustness row: set THREADS to a value other than 16 (e.g. --cpus-per-task=48 --export=ALL,STAGE=cap50thr,THREADS=48)"; exit 1; }
+EXTRA="-DSTARTING_PROGRAM_SIZE_OVERRIDE=50"; SUFFIX="_cap50_${THREADS}thr"; XNOTE=" STARTING_PROGRAM_SIZE=50"; THR_NOTE=" THREADS=$THREADS"
+echo "=== GALOP at cap width, intron-removed, $THREADS host threads (robustness row; the criterion is 16) ==="
+for P in 1800000000 2100000000 2147483646; do rung eff $P; [ "$(last eff $P)" = OK ] || break; done
+unset GALOP_EFF_LOG; EXTRA=""; SUFFIX=""; XNOTE=""; THR_NOTE=""
+fi
+if run_stage sustain; then
+GENS=11; RCAP=${SUSTAIN_CAP:-27000}; SUFFIX="_10gen"; P=2147483646
+echo "=== GALOP intron-removed ceiling P=$P: ten true generations (MAX_GENERATIONS=$GENS, cap ${RCAP}s) ==="
+nvidia-smi --query-gpu=timestamp,memory.used --format=csv,noheader -l 10 > $LOGD/eff${SUFFIX}_${P}.gpumem 2>/dev/null &
+SMI=$!
+export GALOP_PHASE_TIMERS=1; rung eff $P; unset GALOP_PHASE_TIMERS
+kill $SMI 2>/dev/null; wait $SMI 2>/dev/null
+unset GALOP_EFF_LOG; GENS=2; RCAP=$CAP; SUFFIX=""
+fi
+if run_stage pinit; then
+P=2147483646
+for ARM in sinit pinit; do
+  if [ $ARM = pinit ]; then EXTRA="-DGALOP_PARALLEL_INIT"; XNOTE=" GALOP_PARALLEL_INIT"; else EXTRA=""; XNOTE=" serial initializer (control)"; fi
+  SUFFIX="_$ARM"
+  echo "=== GALOP intron-removed ceiling P=$P, one generation, $ARM ==="
+  nvidia-smi --query-gpu=timestamp,memory.used --format=csv,noheader -l 10 > $LOGD/eff${SUFFIX}_${P}.gpumem 2>/dev/null &
+  SMI=$!
+  rung eff $P
+  kill $SMI 2>/dev/null; wait $SMI 2>/dev/null
+done
+unset GALOP_EFF_LOG; EXTRA=""; SUFFIX=""; XNOTE=""
+fi
 echo "CAPACITY H100 COMPLETE -> $CSV (logs: $LOGD/)"

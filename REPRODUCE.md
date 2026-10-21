@@ -51,16 +51,23 @@ report/plot_paper.py                the paper's figures from the CSVs
 | `datasets` | the generators | `datasets/**` + md5s | Sec. 4.2 |
 | `speed-rtx` | `tools/speed_grid.sh` | `results/speed_grid_rtx.csv` | fig3a, Table 2 |
 | `quality-rtx` | `tools/quality_galop.sh`, `quality_evogp.sh`, `quality_sensitivity.sh` | `results/quality_galop_rtx.csv`, `quality_evogp_rtx.csv`, `quality_sensitivity_rtx.csv` | fig5, Sec. 5.2 |
+| `host-share-rtx` | `tools/host_share.sh` | `results/host_share_rtx.csv` | where a run's time goes as P grows: the bench's timers split the evaluator call into host packing, buffer growth, H2D upload, kernel (launch to synchronize) and D2H download, and the host work outside it into top-k selection, elite copy, selection/variation and statistics; D=32 and 1,024 at P=1e3-1e6 and D=32,768 at P=1e5, five seeds (Sec. 5.1) |
+| `breakdown-h100` | `tools/cluster/breakdown_h100.sbatch` (the same producer on one H100; `DLIST="32 1024 32768 131072"` adds the grid's fourth D) | `results_h100/breakdown_h100.csv` | the same split on the H100 at D in {32, 1,024, 32,768} x P in {1e3, 1e4, 1e5, 1e6}, five seeds (Sec. 5.1) |
+| `effective-length-rtx` | `tools/effective_length.sh` | `results/effective_length_rtx.csv` | effective program length per workload (Sec. 5.3); reruns the P=1e5 quality cells with the intron-removed layout and requires each run to reproduce its quality row |
 | `cpu-anchor` | `tools/cpu_anchor.sh` | `results/cpu_anchor_rtx.csv` | the gplearn sentence |
 | `residency-rtx` | `tools/residency_rtx.py` | `results/residency_rtx.csv` | 448 M on the RTX |
 | `flagship-rtx` | `tools/scale_rtx.sh` | `results/scale_rtx.csv` | 151.5 s at P=3.2e7 |
 | `speed-h100` | `tools/cluster/speed_h100.sbatch` (STAGE = grid, redo, boundary, hybrid, modes) | `results_h100/speed_grid_h100.csv`, `speed_boundary_h100.csv`, `speed_hybrid_h100.csv`, `speed_evogp_modes_h100.txt` | fig3b/c, Table 2, Sec. 5.1 |
 | `anchors-h100` | `tools/cluster/anchors_h100.sbatch` (STAGE = srgpu, kozax, beagle) | `results_h100/anchors_grid_h100.csv` | anchor ratios |
 | `quality-h100` | `tools/cluster/quality_h100.sbatch` (STAGE = srgpu, kozax, beagle) | `results_h100/quality_anchors_h100.csv`, `quality_beagle_h100.csv` | anchor quality sentences |
-| `capacity-h100` | `tools/cluster/capacity_h100.sbatch`, `residency_h100.sbatch`, `scale_h100.sbatch`, `beagle_wall_h100.sbatch` | `results_h100/capacity_h100.csv`, `residency_h100.csv`, `scale_h100.csv`, `beagle_wall_h100.*` | fig6, Sec. 5.3 |
+| `capacity-h100` | `tools/cluster/capacity_h100.sbatch` (STAGE = evogp, kozax, beagle, srgpu, galop, cap50; `cap50` = both GALOP ladders with every program at the 50-instruction cap; `sustain` = the intron-removed ceiling rung run for ten true generations, never part of `all`, submitted with `--time=08:00:00`; `pinit` = one generation at the ceiling with the shipped serial initializer and with the `-DGALOP_PARALLEL_INIT` build flag (initialization time only; the flag's population is a different random population and is never mixed with the shipped results); `cap50thr` = the at-cap intron-removed ladder with `THREADS` host threads instead of the criterion's 16, a labelled robustness row, submitted with `--cpus-per-task=$THREADS`), `residency_h100.sbatch`, `scale_h100.sbatch` (STAGE = galop, beagle, p1e9 = P=1e9 x 100 generations, never part of `all`, submitted with `--mem=600G`; pcap = the same run at the intron-removed ceiling 2^31-2, one seed, `--mem=1000G`, may end in a device OOM by design), `beagle_wall_h100.sbatch` | `results_h100/capacity_h100.csv`, `residency_h100.csv`, `scale_h100.csv`, `beagle_wall_h100.*` | fig6, Sec. 5.3 |
 
 `local-all` and `h100-all` run or submit every stage of a track. Every producer is
-resume-safe (per-row guards): rerunning fills only missing rows. Cluster jobs take
+resume-safe (per-row guards): rerunning fills only missing rows, so a stage run on top of
+the shipped file does nothing. To re-measure a stage, move its shipped CSV aside first; the
+producer then rebuilds it row by row and the readouts print from whichever file is in place
+(`tools/speed_grid.sh` and `tools/host_share.sh` also accept `SPEED_CSV` / `HS_CSV` for a
+different output path). Cluster jobs take
 `STAGE=` (via `sbatch --export=ALL,STAGE=...`) to run one part. The shipped result files
 were measured in several sessions of these producers; each capacity row carries its node
 and date, and the two speed-grid cells re-measured in a dedicated session carry

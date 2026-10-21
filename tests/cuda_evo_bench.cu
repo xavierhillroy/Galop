@@ -83,6 +83,10 @@ static void run(const char* name, CudaEvaluator::Strategy strat, const Dataset& 
     fprintf(stderr, "BREAKDOWN %s: total=%.3fs eval=%.3fs (%.1f%%) host+other=%.3fs\n",
             name, sec, evalp->eval_seconds(), 100.0 * evalp->eval_seconds() / sec,
             sec - evalp->eval_seconds());
+    if (std::getenv("GALOP_PHASE_TIMERS"))   // the evaluator call split, same clock as BREAKDOWN
+        fprintf(stderr, "EVALSPLIT %s: pack=%.4fs alloc=%.4fs h2d=%.4fs kernel=%.4fs d2h=%.4fs other=%.4fs\n",
+                name, evalp->pack_seconds(), evalp->alloc_seconds(), evalp->h2d_seconds(), evalp->kernel_seconds(), evalp->d2h_seconds(),
+                evalp->eval_seconds() - evalp->pack_seconds() - evalp->alloc_seconds() - evalp->h2d_seconds() - evalp->kernel_seconds() - evalp->d2h_seconds());
 }
 
 int main(int argc, char** argv) {

@@ -12,6 +12,32 @@
 #include <iostream>
 #include "EvalBackend.h"
 #include <memory>
+#include <type_traits>
+
+// =============================================================================
+// GALOP_PARALLEL_INIT (build flag, default OFF): population initialization in
+// parallel. OFF, the engine is exactly the shipped one: the instruction buffers
+// are zero-filled at construction and init_population() is one serial pass of
+// the engine's mt19937 over every P x MAX_PROGRAM_SIZE slot. ON, the buffers
+// are allocated without that zero pass (InstrVec below) and init_population()
+// generates program i from its own PCG32 stream (seed, i) in an OpenMP loop,
+// so the population is a function of the seed alone, identical for any thread
+// count -- but DIFFERENT from the serial initializer's population: the flag
+// changes initialization time only and must never be mixed with results
+// measured without it.
+// =============================================================================
+#ifdef GALOP_PARALLEL_INIT
+template <class T>
+struct DefaultInitAlloc : std::allocator<T> {       // value-initialization becomes default-initialization: no zero pass
+    template <class U> struct rebind { using other = DefaultInitAlloc<U>; };
+    using std::allocator<T>::allocator;
+    template <class U> void construct(U* p) noexcept(std::is_nothrow_default_constructible<U>::value) { ::new (static_cast<void*>(p)) U; }
+    template <class U, class... A> void construct(U* p, A&&... a) { ::new (static_cast<void*>(p)) U(std::forward<A>(a)...); }
+};
+using InstrVec = std::vector<uint32_t, DefaultInitAlloc<uint32_t>>;
+#else
+using InstrVec = std::vector<uint32_t>;
+#endif
 
 // =============================================================================
 // PopulationData: owns all the buffers that describe the population.
@@ -75,7 +101,7 @@ struct PCG32 {
 struct PopulationData {
 
     // ---- Current generation ------------------------------------------------
-    std::vector<uint32_t> instructions_buf[2];      // Flat buffer of all programs'
+    InstrVec instructions_buf[2];                   // Flat buffer of all programs'
                                              // instructions; size = TOTAL_INSTRUCTIONS.
     std::vector<uint8_t>  program_lengths_buf[2];   // Active length of each program.
                                              // uint8_t because MAX_PROGRAM_SIZE fits
@@ -102,7 +128,11 @@ struct PopulationData {
     // -------------------------------------------------------------------------
     PopulationData(){
         for (int b =0; b <2; ++b){
+#ifdef GALOP_PARALLEL_INIT
+            instructions_buf[b].resize(LGPConfig::TOTAL_INSTRUCTIONS);   // allocated, not touched: init_population() is the first touch
+#else
             instructions_buf[b].assign(LGPConfig::TOTAL_INSTRUCTIONS, 0);
+#endif
             program_lengths_buf[b].assign(LGPConfig::POPULATION_SIZE, LGPConfig::SIZE_SENTINEL);// invalid sentinel is 255 ( largest val we can read in uint8 )
             fitness_scores_buf[b].assign(LGPConfig::POPULATION_SIZE, std::numeric_limits<float>::quiet_NaN());
         }
@@ -212,7 +242,7 @@ private:
                                                // allocation persists across generations
 
     // readers
-    const std::vector<uint32_t>& cur_instructions() const{ // returns reference to current instruction buffer 
+    const InstrVec& cur_instructions() const{ // returns reference to current instruction buffer 
         return data.instructions_buf[current_buffer];
     } 
     const std::vector<uint8_t>& cur_lengths() const {
@@ -222,7 +252,7 @@ private:
         return data.fitness_scores_buf[current_buffer];
     }
     // write accessor - where to write next gen + Current gen fitness  - (KEY THESE GIVE YOU THE NEXT GEN EMBEDDED)
-    std::vector<uint32_t>& next_instructions(){
+    InstrVec& next_instructions(){
         return data.instructions_buf[1 - current_buffer ]; //if buff is 0, 1 - 0 = 1 flips, if buff is 1, 1-1  = 0, so it flips 
     }
     std::vector<uint8_t>& next_lengths(){
@@ -235,7 +265,7 @@ private:
     std::vector<float>& cur_fitness_mutable(){
         return data.fitness_scores_buf[current_buffer];
     }
-    std::vector<uint32_t>& cur_instructions_mutable(){
+    InstrVec& cur_instructions_mutable(){
         return data.instructions_buf[current_buffer];
     }
     std::vector<uint8_t>& cur_lengths_mutable()  {

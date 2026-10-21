@@ -50,11 +50,16 @@ else:
     Mloc, _ = _grid(_loc, [32, 1024, 32768])
     Mh, okh = _grid(_h, [32, 1024, 32768, 131072], stability=True)
     _bnd = _load(os.path.join(_R, "..", "results_h100", "speed_boundary_h100.csv"))
-    fig, axes = plt.subplots(1, 3, figsize=(12.6, 3.7), layout="constrained",
-                             gridspec_kw={"width_ratios": [3, 4, 2.6]})
-    for ax, M, ok, cols, t in ((axes[0], Mloc, None, ["D=32","D=1,024","D=32,768"], "RTX 5070 Ti"),
-                               (axes[1], Mh, okh, ["D=32","D=1,024","D=32,768","D=131,072"],
-         "H100")):
+    # Layout (2026-10-12): drawn at the LNCS text width (4.8 in) so every font is its printed size;
+    # the two heat maps share the top row and one colour bar, the D-extension panel takes the full
+    # width below them. Fonts 8-9 pt.
+    from matplotlib.ticker import LogLocator, NullFormatter
+    fig = plt.figure(figsize=(4.8, 5.8), layout="constrained")
+    gs = fig.add_gridspec(2, 3, width_ratios=[3, 4, 0.18], height_ratios=[1.0, 0.85], wspace=0.04, hspace=0.16)
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    cax = fig.add_subplot(gs[0, 2]); axB = fig.add_subplot(gs[1, :])
+    for ax, M, ok, cols, t in ((axes[0], Mloc, None, ["32", "1,024", "32,768"], "RTX 5070 Ti"),
+                               (axes[1], Mh, okh, ["32", "1,024", "32,768", "131,072"], "H100")):
         A = np.array(M)
         disp = A.copy()
         if ok is not None:
@@ -66,24 +71,30 @@ else:
             for j in range(len(cols)):
                 if ok is not None and not ok[i][j]:
                     ax.add_patch(Rectangle((j-0.5, i-0.5), 1, 1, facecolor="#EEEEEE", edgecolor="white", hatch="///"))
-                    ax.text(j, i, "n.m.", ha="center", va="center", fontsize=8, color="#999999")
+                    ax.text(j, i, "n.m.", ha="center", va="center", fontsize=7, color="#999999")
                 else:
                     v = A[i][j]
                     lab = f"{v:.2f}×" if v < 1.2 else f"{v:.1f}×"
                     ax.text(j, i, lab, ha="center", va="center",
                             color="white" if v > 11 else ("#B22222" if v < 1 else "#123"),
-                            fontsize=10.5, weight="bold")
-        ax.set_xticks(range(len(cols)), cols, fontsize=7 if len(cols) == 4 else 8.5)
-        ax.set_yticks(range(4), ["P=10³","P=10⁴","P=10⁵","P=10⁶"], fontsize=9)
+                            fontsize=8.5, weight="bold")
+        ax.set_xticks(range(len(cols)), cols, fontsize=8)
+        ax.set_yticks(range(4), ["P=10³", "P=10⁴", "P=10⁵", "P=10⁶"], fontsize=8)
         ax.set_xticks([x-0.5 for x in range(1, len(cols))], minor=True)
         ax.set_yticks([y-0.5 for y in range(1, 4)], minor=True)
-        ax.grid(which="minor", color="white", lw=2); ax.tick_params(which="minor", length=0)
-        ax.set_title(t, fontsize=9.5)
-    axB = axes[2]
+        ax.grid(which="minor", color="white", lw=1.5); ax.tick_params(which="minor", length=0)
+        ax.tick_params(which="major", length=2)
+        ax.set_xlabel("D (fitness cases)", fontsize=8, labelpad=2)
+        ax.set_title(t, fontsize=9, pad=4)
+    axes[1].tick_params(axis="y", labelleft=False)     # the two maps share the P rows
+    cb = fig.colorbar(im, cax=cax)
+    cb.set_label("median speedup (>1 favours Galop)", fontsize=8)
+    cb.ax.tick_params(labelsize=8, length=2)
+    # ---- (c) the D extension, full width
     Dseq = [32, 1024, 32768, 131072, 262144, 524288]
     STY = {1000: (0.45, "o"), 10000: (0.75, "s"), 100000: (1.0, "D")}
     for P in (1000, 10000, 100000):   # the boundary probe covers P <= 1e5; P=1e6 dropped 2026-09-16
-        xs, ys, xn, yn = [], [], [], []
+        xs, ys, xn, yn, lo, hi = [], [], [], [], [], []
         for D in Dseq:
             src = _bnd if D in (262144, 524288) else _h
             g, e = src.get(("galop_std", P, D)), src.get(("evogp", P, D))
@@ -94,37 +105,69 @@ else:
                 xn.append(D); yn.append(r)
             else:
                 xs.append(D); ys.append(r)
+                lo.append(min(e) / max(g)); hi.append(max(e) / min(g))   # ratio of the extreme runs (2026-10-19): slowest EvoGP / fastest Galop and the reverse
         a, mk = STY[P]
-        axB.plot(xs, ys, marker=mk, ms=5, lw=1.8, color=GAL, alpha=a,
+        axB.errorbar(xs, ys, yerr=[[y - l for y, l in zip(ys, lo)], [h - y for y, h in zip(ys, hi)]],
+                     fmt="none", ecolor=GAL, alpha=a, elinewidth=1.0, capsize=2.5, capthick=1.0, zorder=2)
+        axB.plot(xs, ys, marker=mk, ms=4.5, lw=1.6, color=GAL, alpha=a, zorder=3,
                  label=f"P=10{'³⁴⁵⁶'[[1000,10000,100000,1000000].index(P)]}")
         if xn:
-            axB.scatter(xn, yn, marker=mk, s=30, facecolors="white",
+            axB.scatter(xn, yn, marker=mk, s=24, facecolors="white",
                         edgecolors=GAL, alpha=a, zorder=3)
-    axB.axhline(1.0, color="#B22222", lw=1.4, ls="--")
-    axB.text(33, 1.06, "parity", color="#B22222", fontsize=8)
+    axB.axhline(1.0, color="#B22222", lw=1.2, ls="--")
+    axB.text(36, 1.07, "parity", color="#B22222", fontsize=8)
     axB.set_xscale("log"); axB.set_yscale("log")
-    axB.set_xticks([32, 1024, 32768, 131072, 524288], ["32", "1k", "33k", "131k", "524k"], fontsize=8.5)
-    axB.set_yticks([0.5, 1, 2, 4, 8], ["0.5×", "1×", "2×", "4×", "8×"], fontsize=8.5)
+    axB.set_xticks(Dseq, ["32", "1,024", "32,768", "131,072", "262,144", "524,288"], fontsize=8, rotation=30, ha="right", rotation_mode="anchor")
+    axB.set_yticks([0.5, 1, 2, 4, 8], ["0.5×", "1×", "2×", "4×", "8×"], fontsize=8)
     axB.minorticks_off()
-    from matplotlib.ticker import LogLocator, NullFormatter
     axB.xaxis.set_minor_locator(LogLocator(base=10, subs=range(2, 10)))
     axB.xaxis.set_minor_formatter(NullFormatter())
-    axB.tick_params(axis="x", which="minor", length=2.5, color="#999999")
-    axB.set_xlabel("D (fitness cases, log axis)", fontsize=9)
-    axB.set_title("H100, extended D", fontsize=9.5)   # PROVISIONAL name (2026-09-16)
-    axB.legend(fontsize=7.5, frameon=False, loc="center left", bbox_to_anchor=(1.02, 0.5))
+    axB.tick_params(axis="x", which="minor", length=2, color="#999999")
+    axB.tick_params(which="major", length=2.5)
+    axB.set_xlabel("D (fitness cases, log axis)", fontsize=8, labelpad=2)
+    axB.set_ylabel("median speedup", fontsize=8)
+    axB.set_title("H100, extended D", fontsize=9, pad=4)
+    axB.legend(fontsize=8, frameon=False, loc="upper right", handlelength=2.2)
     axB.grid(True, ls=":", alpha=0.3)
-    cb = fig.colorbar(im, ax=list(axes[:2]), shrink=0.85, pad=0.02)
-    cb.set_label("median speedup (>1 favours GALOP)", fontsize=8)
-    # No suptitle: the caption carries the protocol, titles name only the hardware
-    # (2026-09-16). Panel letters centred under each panel.
-    fig.canvas.draw()   # finalize constrained layout so the letters share one baseline
-    _bot = min(_a.get_position().y0 for _a in axes)
-    for _ax, _lab in zip(axes, ("(a)", "(b)", "(c)")):
-        _bb = _ax.get_position()
-        fig.text((_bb.x0 + _bb.x1) / 2, _bot - 0.13, _lab, ha="center", va="top", fontsize=10)
-    fig.savefig(f"{OUT}/fig3_wholerun.png", dpi=170, bbox_inches="tight")
+    # Panel letters centred under each panel; the caption carries the protocol.
+    fig.canvas.draw()
+    _ren = fig.canvas.get_renderer()
+    for _ax, _lab in ((axes[0], "(a)"), (axes[1], "(b)"), (axB, "(c)")):
+        _bb = _ax.get_position()                                                      # axes box: horizontal centre
+        _tb = _ax.get_tightbbox(_ren).transformed(fig.transFigure.inverted())        # incl. tick labels and axis label: vertical anchor
+        fig.text((_bb.x0 + _bb.x1) / 2, _tb.y0 - 0.008, _lab, ha="center", va="top", fontsize=9)
+    fig.savefig(f"{OUT}/fig3_wholerun.png", dpi=200, bbox_inches="tight")
     fig.savefig(f"{OUT}/fig3_wholerun_heatmaps.pdf", bbox_inches="tight"); plt.close(fig)
+    # ---- Fig 4: end-to-end scaling with population on the H100 at two fitness-set sizes ------------
+    # (2026-10-16) median of the five timed runs per cell with the observed min-max range shaded; a
+    # no reference line: the slopes are read against the grid and stated in the text. Drawn at the LNCS
+    # text width so the fonts print at 8-9 pt. Same CSV as the heat maps.
+    fig4, axs = plt.subplots(1, 2, figsize=(4.8, 2.55), layout="constrained")
+    for ax, D in zip(axs, (32, 32768)):
+        for arm, col, name, mk in (("galop_std", GAL, "Galop", "o"), ("evogp", EVO, "EvoGP", "s")):
+            mv, lo, hi = [], [], []
+            for P in Ps:
+                v = _h[(arm, P, D)]; mv.append(_med(v)); lo.append(min(v)); hi.append(max(v))
+            ax.fill_between(Ps, lo, hi, color=col, alpha=0.22, lw=0, zorder=1)                      # observed range of the five runs
+            ax.errorbar(Ps, mv, yerr=[[m - l for m, l in zip(mv, lo)], [h - m for m, h in zip(mv, hi)]],
+                        fmt="none", ecolor=col, elinewidth=1.0, capsize=2.5, capthick=1.0, zorder=2)
+            ax.plot(Ps, mv, marker=mk, ms=3.6, mec="white", mew=0.5, lw=1.5, color=col, label=name, zorder=3)
+        _all = [x for arm in ("galop_std", "evogp") for P in Ps for x in _h[(arm, P, D)]]
+        ax.set_ylim(min(_all) * 0.55, max(_all) * 1.9); ax.set_xlim(6e2, 1.7e6)
+        ax.set_xscale("log"); ax.set_yscale("log")
+        ax.set_xticks(Ps, ["10³", "10⁴", "10⁵", "10⁶"], fontsize=8); ax.minorticks_off()
+        ax.tick_params(axis="y", labelsize=8); ax.tick_params(length=2.5)
+        ax.set_title(f"D = {D:,}", fontsize=9, pad=4)
+        ax.set_xlabel("P (population, log scale)", fontsize=8, labelpad=2)
+        ax.grid(True, ls=":", alpha=0.3)
+    axs[0].set_ylabel("wall-clock, 100 generations (s, log scale)", fontsize=8)
+    axs[0].legend(fontsize=8, frameon=False, loc="upper left", handlelength=2.0)
+    fig4.canvas.draw(); _ren4 = fig4.canvas.get_renderer()
+    for _ax, _lab in zip(axs, ("(a)", "(b)")):
+        _bb = _ax.get_position(); _tb = _ax.get_tightbbox(_ren4).transformed(fig4.transFigure.inverted())
+        fig4.text((_bb.x0 + _bb.x1) / 2, _tb.y0 - 0.02, _lab, ha="center", va="top", fontsize=9)
+    fig4.savefig(f"{OUT}/fig4_scaling.png", dpi=200, bbox_inches="tight")
+    fig4.savefig(f"{OUT}/fig4_scaling.pdf", bbox_inches="tight"); plt.close(fig4)
     # Companion table: ABSOLUTE median wall-clock (s) behind the fig3 ratios, both
     # cards, Galop / EvoGP per cell (2026-09-16, reviewer ask: ratios alone are not
     # a durable reference). Same CSVs, same nmredo merge -> figures/paper_short/tab_wholerun_abs.tex
@@ -203,15 +246,15 @@ for ti, yi in enumerate(y):
         ax.scatter([a], [yi], s=SIZ[P], color=VC[v], zorder=3, edgecolor="white", linewidth=1.1)
 for P, lab in ((1000, "P=10³"), (10000, "P=10⁴"), (100000, "P=10⁵")):
     ax.scatter([], [], s=SIZ[P], color="#666666", label=lab, edgecolor="white")
-ax.scatter([], [], s=95, color=VC["G"], label="GALOP (Holm-sig.)", edgecolor="white")
+ax.scatter([], [], s=95, color=VC["G"], label="Galop (Holm-sig.)", edgecolor="white")
 ax.scatter([], [], s=95, color=VC["E"], label="EvoGP (Holm-sig.)", edgecolor="white")
 ax.scatter([], [], s=95, color=VC["U"], label="undecided", edgecolor="white")
 ax.legend(fontsize=7.5, loc="center left", bbox_to_anchor=(1.005, 0.5), frameon=False)
 ax.axhline(1.5, color=GRY, ls=":", lw=1)
-ax.set_yticks(y, tasks, fontsize=10)
+ax.set_yticks(y, tasks, fontsize=11); ax.tick_params(axis="x", labelsize=10.5)
 ax.set_xlim(-0.02, 1.02); ax.set_ylim(-0.7, len(tasks)-0.4)
-ax.set_xlabel("Vargha–Delaney A$_{12}$", fontsize=9)   # direction stated in-figure + caption (2026-09-16)
-ax.text(0.03, -0.62, "← GALOP favoured", fontsize=10, color=GAL, weight="bold")
+ax.set_xlabel("Vargha–Delaney A$_{12}$", fontsize=10.5)   # direction stated in-figure + caption (2026-09-16)
+ax.text(0.03, -0.62, "← Galop favoured", fontsize=10, color=GAL, weight="bold")
 ax.text(0.97, -0.62, "EvoGP favoured →", ha="right", fontsize=10, color=EVO, weight="bold")
 # no title: the caption carries n, the tests and the 9-9-4 aggregate (2026-09-16)
 ax.grid(True, axis="x", ls=":", alpha=0.3)
@@ -223,26 +266,67 @@ fig.savefig(f"{OUT}/fig5_matched_quality.pdf", bbox_inches="tight"); plt.close(f
 # exact index bound 2^31-2 = 2,147,483,646: a full generation (MAX_GENERATIONS=2)
 # completes there in 857 s evolve / 1,112 s process against the 1,200 s criterion
 # (capacity_gen2_h100.csv, 2026-09-20). Packed bar = 1.4e9, also confirmed at gen 2.
-sysn = ["Kozax", "SRGPU", "EvoGP", "Beagle", "GALOP\n(packed)", "GALOP\n(intron-removed)"]
+sysn = ["Kozax", "SRGPU", "EvoGP", "Beagle", "Galop", "Galop\n(intron-removed)"]
 caps = [4e4, 1.6e7, 1.6777e7, 5.36e8, 1.4e9, 2147483646]
 clab = ["40.0 k", "16.0 M", "16.8 M", "536 M", "1.40 B", "2.15 B"]   # three significant figures throughout
 cols6 = ["#BBBBBB", "#999999", EVO, "#6C8EBF", "#7FB3E3", GAL]
-fig, (a1, a2) = plt.subplots(1, 2, figsize=(10.2, 4.0), layout="constrained",
-                             gridspec_kw={"width_ratios": [3, 2]})
+# GALOP at cap width — an ADDITIONAL, labelled arm (never a replacement of the two bars
+# above): every program initialized at the 50-instruction cap (STARTING_PROGRAM_SIZE_OVERRIDE=50,
+# STAGE=cap50 of capacity_h100.sbatch), rows galop_packed_cap50 / galop_eff_cap50 of
+# capacity_h100.csv; ceiling = largest OK rung, the rule of every other bar. Drawn (hatched)
+# only once those rows exist, so the figure is unchanged until the arm lands.
+_cap50 = {}
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results_h100", "capacity_h100.csv")) as _fh:
+    for _r in csv.DictReader(_fh):
+        if _r["system"].endswith("_cap50") and _r["outcome"] == "OK":
+            _cap50[_r["system"]] = max(_cap50.get(_r["system"], 0), int(_r["P"]))
+def _lab3(v):   # three significant figures with k / M / B, as the labels above
+    for _u, _s in (("B", 1e9), ("M", 1e6), ("k", 1e3)):
+        if v >= _s:
+            _x = v / _s
+            return (f"{_x:.0f}" if _x >= 100 else f"{_x:.1f}" if _x >= 10 else f"{_x:.2f}") + f" {_u}"
+    return f"{v:.0f}"
+_n_cap50 = 0
+for _k, _n, _c in (("galop_packed_cap50", "Galop\n(max-length stress test)", "#7FB3E3"),
+                   ("galop_eff_cap50", "Galop (intron-removed,\ncap-initialized stress test)", GAL)):
+    if _k in _cap50:
+        sysn.append(_n); caps.append(_cap50[_k]); clab.append(_lab3(_cap50[_k])); cols6.append(_c); _n_cap50 += 1
+fig, (a1, a2) = plt.subplots(1, 2, figsize=(10.2, 4.0 + 0.45 * _n_cap50), layout="constrained",
+                             gridspec_kw={"width_ratios": [3, 2.5]})
 b = a1.barh(sysn, caps, color=cols6, height=0.6)
+for _bar in list(b)[len(b) - _n_cap50:]: _bar.set_hatch("///"); _bar.set_edgecolor("white")
 a1.set_xscale("log"); a1.set_xlim(8e3, 3e10)
 for r, c, l in zip(b, caps, clab):   # value labels outside every bar; the limiting mechanism is in the text, not the figure
     a1.text(c*1.12, r.get_y() + r.get_height()/2, l, va="center", fontsize=10, weight="bold")
-a1.set_xlabel("maximum population completing one generation, 80 GB H100 (log)", fontsize=9)
-rn = ["GALOP\n(48 threads)", "GALOP\n(uniform 16 thr.)", "Beagle"]
-rt = [313.0, 416.0, 3284.0]
-b2 = a2.barh(rn, rt, color=[GAL, "#7FB3E3", "#6C8EBF"], height=0.55)
-for r, v in zip(b2, rt):
-    a2.text(v*1.12, r.get_y()+r.get_height()/2, f"{v:,.0f} s", va="center", fontsize=9.5, weight="bold")
-a2.set_xscale("log"); a2.set_xlim(80, 4e4)
-a2.text(90, -0.62, "EvoGP / SRGPU / Kozax: population unreachable", fontsize=7.5, color="#666666", style="italic")
-a2.set_ylim(-0.9, 2.6)
-a2.set_xlabel("wall-clock, P=10⁸ × 100 generations, H100 (log)", fontsize=9)
+a1.set_xlabel("maximum population completing one generation, 80 GB H100 (log)", fontsize=10.5)
+a1.tick_params(axis="x", labelsize=10.5); a1.tick_params(axis="y", labelsize=11)
+# (b) sustained 100-generation runs (scale_h100.csv), linear wall-clock axis. Light bar and marker =
+# median of the timed runs, whisker = observed minimum to maximum. No line joins the rows: the runs
+# were spread over shared nodes and the per-individual timings do not support a scaling trend. The
+# layout, thread count and completion counts are in the caption.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results_h100", "scale_h100.csv")) as _fh:
+    _sc = list(csv.DictReader(_fh))
+def _runs(system, P):
+    rs = [r for r in _sc if r["system"] == system and r["P"] == str(P) and r["rep"] != "warmup"]
+    return sorted(float(r["wall_s"]) for r in rs if r["outcome"] == "OK"), len(rs)
+_BGL = "#6C8EBF"
+_rowsb = [("Beagle\n$P=10^{8}$", _runs("beagle", 100000000), _BGL),
+          ("Galop\n$P=10^{8}$", _runs("galop_eff", 100000000), GAL),
+          ("Galop\n$P=10^{9}$", _runs("galop_eff", 1000000000), GAL),
+          ("Galop\n$P=2^{31}{-}2$", _runs("galop_eff", 2147483646), GAL)]
+for _y, (_name, (_w, _n), _col) in enumerate(_rowsb):
+    _m = _med(_w)
+    a2.barh(_y, _m, color=_col, alpha=0.25, height=0.52, zorder=1)
+    a2.plot([min(_w), max(_w)], [_y, _y], color=_col, lw=1.8, zorder=3, solid_capstyle="butt")
+    for _x in (min(_w), max(_w)): a2.plot([_x, _x], [_y - 0.13, _y + 0.13], color=_col, lw=1.8, zorder=3)
+    a2.scatter([_m], [_y], s=58, color=_col, edgecolor="white", linewidth=1.0, zorder=5)
+    a2.text(max(_w) + 330, _y, f"{_m:,.0f} s", va="center", fontsize=9.5, weight="bold")
+a2.set_yticks(range(len(_rowsb))); a2.set_yticklabels([_r[0] for _r in _rowsb])
+a2.set_xlim(0, 13200); a2.set_xticks([0, 3000, 6000, 9000, 12000])
+a2.set_xticklabels(["0", "3,000", "6,000", "9,000", "12,000"])
+a2.set_ylim(-0.6, 3.6)
+a2.set_xlabel("wall-clock for 100 generations, H100 (s)", fontsize=10.5)
+a2.tick_params(axis="x", labelsize=10.5); a2.tick_params(axis="y", labelsize=11)
 for a in (a1, a2): a.grid(True, axis="x", ls=":", alpha=0.3)
 # no panel titles (2026-09-16): the caption carries the protocol; letters on one baseline
 fig.canvas.draw()

@@ -5,7 +5,8 @@ design decision: **one individual per CUDA warp**. The 32 lanes of a warp execut
 same program over 32 fitness cases in lockstep, population parallelism is exposed
 across warps, and selection and variation stay on the CPU. This repository contains
 the system, the experiment scripts, the measured results and the figure code behind
-the Galop Paper.
+the paper *Galop: Scaling Genetic Programming to Billions of Individuals* (submitted to
+EuroGP 2027).
 
 ## Quick start
 

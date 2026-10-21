@@ -68,6 +68,7 @@ CudaEvaluator::CudaEvaluator(Strategy strategy, int warp_block_threads, Layout l
 // are independent of when (or whether) a regrow happens.
 void CudaEvaluator::ensure_packed_capacity(long long words) {
     if (words <= packed_capacity_) return;
+    const auto t_a0 = std::chrono::high_resolution_clock::now();
     long long cap = words + words / 4;
     if (cap > LGPConfig::TOTAL_INSTRUCTIONS) cap = LGPConfig::TOTAL_INSTRUCTIONS;
     if (cap < words) cap = words;
@@ -76,6 +77,7 @@ void CudaEvaluator::ensure_packed_capacity(long long words) {
     ERR(cudaMallocHost(&h_packed_, (size_t)cap * sizeof(uint32_t)));
     ERR(cudaMalloc(&d_instructions, (size_t)cap * sizeof(uint32_t)));
     packed_capacity_ = cap;
+    if (timers_) alloc_s_ += std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - t_a0).count();
 }
 
 CudaEvaluator::~CudaEvaluator() {
@@ -300,11 +302,15 @@ void CudaEvaluator::evaluate_population(const uint32_t* instructions,
                                         const Dataset&  ds)
 {
     const auto t_eval0 = std::chrono::high_resolution_clock::now();
+    using _clk = std::chrono::high_resolution_clock;
+    _clk::time_point tA{}, tU0{}, tU1{}, tK0{}, tK1{}, tD0{};
+    const double alloc_before = alloc_s_;
     // 1) dataset — upload the first time we see it, then it stays resident
     if (uploaded_ds_ != &ds) {
         upload_dataset(ds);
         uploaded_ds_ = &ds;
     }
+    if (timers_) tA = _clk::now();
 
     // 2) population UP. The caller (evaluate_range) already offset these
     //    pointers past the elites, so we copy n_programs worth from the FRONT
@@ -316,11 +322,13 @@ void CudaEvaluator::evaluate_population(const uint32_t* instructions,
     //    PackedEffective additionally strips structural introns -- bitwise-
     //    identical fitness, smaller Sigma L on device.
     if (layout_ == Layout::Dense) {
+        if (timers_) tU0 = _clk::now();
         ERR(cudaMemcpy(d_instructions, instructions,
                        (size_t)n_programs * LGPConfig::MAX_PROGRAM_SIZE * sizeof(uint32_t),
                        cudaMemcpyHostToDevice));
         ERR(cudaMemcpy(d_lengths, lengths, n_programs * sizeof(uint8_t),
                        cudaMemcpyHostToDevice));
+        if (timers_) tU1 = _clk::now();
         long long sumL = 0;
         for (int i = 0; i < n_programs; ++i) sumL += lengths[i];
         footprint_log_.push_back({sumL, 0});
@@ -357,10 +365,12 @@ void CudaEvaluator::evaluate_population(const uint32_t* instructions,
         }
         h_cumL_[n_programs] = off;
         footprint_log_.push_back({sumL, sumL});
+        if (timers_) tU0 = _clk::now();
         ERR(cudaMemcpy(d_instructions, h_packed_, (size_t)off * sizeof(uint32_t),
                        cudaMemcpyHostToDevice));
         ERR(cudaMemcpy(d_cumL_, h_cumL_, (size_t)(n_programs + 1) * sizeof(long long),
                        cudaMemcpyHostToDevice));
+        if (timers_) tU1 = _clk::now();
     } else {  // PackedEffective: two-phase like Packed. Phase A walks the
         // liveness masks only, so the buffers are sized by the true effective
         // total -- sizing by the raw bound would give this layout the same
@@ -403,13 +413,16 @@ void CudaEvaluator::evaluate_population(const uint32_t* instructions,
         }
         h_cumL_[n_programs] = effL;
         footprint_log_.push_back({sumL, effL});
+        if (timers_) tU0 = _clk::now();
         ERR(cudaMemcpy(d_instructions, h_packed_, (size_t)off * sizeof(uint32_t),
                        cudaMemcpyHostToDevice));
         ERR(cudaMemcpy(d_cumL_, h_cumL_, (size_t)(n_programs + 1) * sizeof(long long),
                        cudaMemcpyHostToDevice));
+        if (timers_) tU1 = _clk::now();
     }
 
     // 3) launch — pick the kernel under test (strategy x layout)
+    if (timers_) tK0 = _clk::now();
     if (strategy_ == Strategy::Warp) {
         const int threads = warp_block_threads_;             // multiple of 32
         const int warps_per_block = threads / 32;
@@ -437,6 +450,7 @@ void CudaEvaluator::evaluate_population(const uint32_t* instructions,
     }
     ERR(cudaGetLastError());        // catch launch-config errors
     ERR(cudaDeviceSynchronize());   // wait + catch runtime errors
+    if (timers_) { tK1 = _clk::now(); tD0 = tK1; }
 
     // 4) fitness DOWN — pinned staging, then host-side copy to the caller's
     //    (pageable) buffer: two fast copies beat one pageable-D2H.
@@ -444,6 +458,13 @@ void CudaEvaluator::evaluate_population(const uint32_t* instructions,
                           n_programs * sizeof(float),
                           cudaMemcpyDeviceToHost));
     std::memcpy(fitness_out, h_fitness_, (size_t)n_programs * sizeof(float));
-    eval_seconds_ += std::chrono::duration<double>(
-        std::chrono::high_resolution_clock::now() - t_eval0).count();
+    const auto t_end = std::chrono::high_resolution_clock::now();
+    eval_seconds_ += std::chrono::duration<double>(t_end - t_eval0).count();
+    if (timers_) {
+        auto sec = [](auto a, auto b) { return std::chrono::duration<double>(b - a).count(); };
+        pack_s_   += sec(tA, tU0) - (alloc_s_ - alloc_before);   // host packing of this upload, minus any (re)allocation inside it
+        h2d_s_    += sec(tU0, tU1);
+        kernel_s_ += sec(tK0, tK1);                               // launch to synchronize
+        d2h_s_    += sec(tD0, t_end);
+    }
 }

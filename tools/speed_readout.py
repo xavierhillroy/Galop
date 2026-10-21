@@ -116,3 +116,44 @@ for r in csv.DictReader(open("results/cpu_anchor_rtx.csv")): cpu[(r["system"], r
 for k in sorted(cpu): print(f"  {k[0]:8s} {k[1]:15s} P={k[2]:<8d} median {med(cpu[k]):8.2f} s (n={len(cpu[k])})")
 if ("galop", "nguyen2", 1000000) in cpu and ("gplearn", "nguyen2", 1000) in cpu:
     print(f"  paper: gplearn P=1e3 {med(cpu[('gplearn','nguyen2',1000)]):.1f} s vs GALOP P=1e6 {med(cpu[('galop','nguyen2',1000000)]):.1f} s on the same desktop")
+
+# ---- where a run's time goes as P grows (the bench's own timers under GALOP_PHASE_TIMERS; 100 generations, five seeds, OMP_NUM_THREADS=16) ----
+import os, glob
+R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+def time_split(path, card, grid_path):
+    f = os.path.join(R, path)
+    if not os.path.exists(f): return
+    import collections as _c
+    rows = list(csv.DictReader(open(f)))
+    if not rows: return
+    by = _c.defaultdict(list)
+    for r in rows: by[(int(r["D"]), int(r["P"]))].append(r)
+    print(f"\n=== Where the time goes ({path}; {card}, 100 generations): shares of the run's wall in %, medians over the seeds ===")
+    print("  evaluator call = pack (host packing of the population into the device layout) + alloc (growth of the packed buffers) + H2D (upload)")
+    print("                   + kernel (launch to synchronize) + D2H (fitness download); host outside it = top-k selection + elite copy +")
+    print("                   selection/variation + statistics (+ initialization and bookkeeping, the remainder). The kernel is also given in seconds.")
+    print(f"  {'D':>6} {'P':>8} {'n':>2} {'total s':>8} | {'eval':>5} {'pack':>5} {'alloc':>5} {'H2D':>5} {'kern':>5} {'D2H':>5} | {'host':>5} {'sel+var':>7} {'topk':>5} {'elite':>5} {'stats':>5} | {'kernel s':>9}")
+    for D in sorted({d for d, _ in by}):
+        for P in sorted({p for d, p in by if d == D}):
+            rs = by[(D, P)]; m = lambda k: med(float(r[k]) for r in rs); tot = m("total_s"); pc = lambda k: 100 * m(k) / tot
+            print(f"  {D:>6} {P:>8} {len(rs):>2} {tot:8.3f} | {pc('eval_s'):5.1f} {pc('pack_s'):5.1f} {pc('alloc_s'):5.1f} {pc('h2d_s'):5.1f} {pc('kernel_s'):5.1f} {pc('d2h_s'):5.1f} | {pc('host_other_s'):5.1f} {pc('selvary_s'):7.1f} {pc('topk_s'):5.1f} {pc('elites_s'):5.1f} {pc('stats_s'):5.1f} | {m('kernel_s'):9.4f}")
+    print("  (the bench prints the split at millisecond resolution: at P=1e3 the shares are coarse)")
+    # session check (2026-10-21): the same cells exist in the speed grid; a producer session whose totals sit
+    # far from the grid's medians was measured on a throttled or contended machine and should be re-measured.
+    gridf = os.path.join(R, grid_path)
+    if os.path.exists(gridf):
+        gm = _c.defaultdict(list)
+        for r in csv.DictReader(open(gridf)):
+            if r["arm"] == "galop_std": gm[(int(r["D"]), int(r["P"]))].append(float(r["wall_s"]))
+        ratios = [(D, P, med(float(r["total_s"]) for r in by[(D, P)]) / med(gm[(D, P)])) for (D, P) in sorted(by) if (D, P) in gm]
+        if ratios: print("  session check, total / speed-grid median of the same cell: " + ", ".join(f"D={D} P={P}: {x:.2f}" for D, P, x in ratios))
+time_split("results/host_share_rtx.csv", "RTX 5070 Ti", "results/speed_grid_rtx.csv")
+time_split("results_h100/breakdown_h100.csv", "H100", "results_h100/speed_grid_h100.csv")
+
+# ---- achieved occupancy vs P (results/occupancy/galop_warp_P*.csv, written by tools/occupancy_vs_p.sh under sudo) ----
+occ = sorted(glob.glob(os.path.join(R, "results/occupancy/galop_warp_P*.csv")), key=lambda f: int(f.split("_P")[-1][:-4]))
+if occ:
+    print("\n=== Achieved occupancy of Galop's warp kernel vs P (Nsight Compute sm__warps_active, % of peak sustained; D=32, RTX 5070 Ti) ===")
+    for f in occ:
+        vals = [float(l.strip().split(",")[-1].strip('"')) for l in open(f) if "sm__warps_active" in l]
+        if vals: print(f"  P={int(f.split('_P')[-1][:-4]):>9,}: {sum(vals)/len(vals):5.1f}%")

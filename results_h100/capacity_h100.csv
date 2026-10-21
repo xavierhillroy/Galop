@@ -25,3 +25,16 @@ galop_eff,2100000000,OK,1140,847.497,g1.nibi.sharcnet,2026-09-20,MAX_GENERATIONS
 galop_eff,2147483646,OK,1112,857.034,g1.nibi.sharcnet,2026-09-20,MAX_GENERATIONS=2; BREAKDOWN warp: total=857.034s eval=43.421s (5.1%) host+other=813.613s
 galop_eff,2147483647,BUILD_FAIL,0,,,2026-09-03,"TE_COUNT % 2 == 0      ^2 errors detected in the compilation of ""tests/cuda_evo_bench.cu""."
 galop_eff,2200000000,INT32_WALL,0,,,2026-09-03,POPULATION_SIZE is constexpr int
+galop_packed_cap50,200000000,OK,156,115.440,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 BREAKDOWN warp: total=115.440s eval=27.972s (24.2%) host+other=87.467s
+galop_packed_cap50,300000000,OK,228,167.191,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 BREAKDOWN warp: total=167.191s eval=40.074s (24.0%) host+other=127.117s
+galop_packed_cap50,350000000,OK,269,201.704,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 BREAKDOWN warp: total=201.704s eval=49.081s (24.3%) host+other=152.624s
+galop_packed_cap50,400000000,OOM_DEVICE,270,0,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 GPUassert: out of memory src/EvaluatorCuda.cu 77
+galop_eff_cap50,1400000000,OK,932,670.941,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 BREAKDOWN warp: total=670.941s eval=56.534s (8.4%) host+other=614.407s
+galop_eff_cap50,1800000000,OK,1196,866.235,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 BREAKDOWN warp: total=866.235s eval=74.709s (8.6%) host+other=791.526s
+galop_eff_cap50,2100000000,TIMEOUT,1238,0,g3.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 
+galop_eff_10gen,2147483646,OK,2157,1758.620,g2.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=11 .566s (14.6%) host+other=1502.054sPHASES: topk=38.237s elites=30.048s sel+vary=611.928s stats=1.991s
+galop_eff_cap50_48thr,1800000000,OK,1041,757.303,g1.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 THREADS=48 BREAKDOWN warp: total=757.303s eval=44.615s (5.9%) host+other=712.688s
+galop_eff_cap50_48thr,2100000000,OK,1074,812.974,g1.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 THREADS=48 BREAKDOWN warp: total=812.974s eval=53.459s (6.6%) host+other=759.516s
+galop_eff_cap50_48thr,2147483646,OK,1085,827.339,g1.nibi.sharcnet,2026-09-22,MAX_GENERATIONS=2 STARTING_PROGRAM_SIZE=50 THREADS=48 BREAKDOWN warp: total=827.339s eval=52.852s (6.4%) host+other=774.487s
+galop_eff_sinit,2147483646,TIMEOUT,1247,0,g10.nibi.sharcnet,2026-10-02,MAX_GENERATIONS=2 serial initializer (control) 
+galop_eff_pinit,2147483646,OK,188,148.110,g10.nibi.sharcnet,2026-10-02,MAX_GENERATIONS=2 GALOP_PARALLEL_INIT BREAKDOWN warp: total=148.110s eval=43.055s (29.1%) host+other=105.055s

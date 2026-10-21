@@ -51,6 +51,23 @@ void LGPEngine::init_evolution(){
 }
 void LGPEngine::init_population(){
     reset_buffers_to_sentinels();
+#ifdef GALOP_PARALLEL_INIT
+    // Parallel initialization (see LGPEngine.h): program i comes from its own PCG32 stream
+    // (base, i), the base drawn once from the engine's seeded mt19937, so the population is a
+    // function of the seed alone for any thread count. Every slot of the stride is written, as
+    // in the serial pass; this loop is the first touch of the buffer.
+    const uint64_t base = ((uint64_t)rng() << 32) | (uint64_t)rng();
+    uint32_t* buf = cur_instructions_mutable().data();
+    #pragma omp parallel for schedule(static)
+    for (long long i = 0; i < (long long)LGPConfig::POPULATION_SIZE; ++i) {
+        PCG32 r(base, (uint64_t)i);
+        uint32_t* p = buf + (size_t)i * LGPConfig::MAX_PROGRAM_SIZE;
+        for (int k = 0; k < LGPConfig::MAX_PROGRAM_SIZE; ++k) p[k] = ISA::encode_from_random(r());
+    }
+    uint8_t* len = cur_lengths_mutable().data();
+    #pragma omp parallel for schedule(static)
+    for (long long i = 0; i < (long long)LGPConfig::POPULATION_SIZE; ++i) len[i] = (uint8_t)LGPConfig::STARTING_PROGRAM_SIZE;
+#else
     // sets all instructions for all programs
     for (long long i = 0; i < LGPConfig::TOTAL_INSTRUCTIONS; i ++){
         cur_instructions_mutable()[i] = generate_instruction();
@@ -60,7 +77,7 @@ void LGPEngine::init_population(){
     std::fill(cur_lengths_mutable().begin(),
               cur_lengths_mutable().end(),
               static_cast<uint8_t>(LGPConfig::STARTING_PROGRAM_SIZE));
-
+#endif
 } // V easy GPU transformation 
 
 // Generates instructions
@@ -439,12 +456,22 @@ void LGPEngine::vary(){
 }
 void LGPEngine::reset_buffers_to_sentinels() {
     for (int b = 0; b < 2; ++b) {
+#ifdef GALOP_PARALLEL_INIT
+        float*   f = data.fitness_scores_buf[b].data();
+        uint8_t* l = data.program_lengths_buf[b].data();
+        #pragma omp parallel for schedule(static)
+        for (long long i = 0; i < (long long)LGPConfig::POPULATION_SIZE; ++i) {
+            f[i] = std::numeric_limits<float>::quiet_NaN();
+            l[i] = static_cast<uint8_t>(LGPConfig::SIZE_SENTINEL);
+        }
+#else
         std::fill(data.fitness_scores_buf[b].begin(),
                   data.fitness_scores_buf[b].end(),
                   std::numeric_limits<float>::quiet_NaN());
         std::fill(data.program_lengths_buf[b].begin(),
                   data.program_lengths_buf[b].end(),
                   static_cast<uint8_t>(LGPConfig::SIZE_SENTINEL));
+#endif
     }
 }
 GenerationStats LGPEngine::compute_stats() const {

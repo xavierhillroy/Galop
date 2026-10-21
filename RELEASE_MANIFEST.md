@@ -1,11 +1,11 @@
-# Release manifest — built 2026-09-21
+# Release manifest — built 2026-10-21
 
 md5 = of the staged file; rows = CSV data rows. Result files are shipped unedited.
 
 | category | path | md5 | rows | note |
 |---|---|---|---|---|
 | engine | src/ | dir: 20 files | | the system; LGPConfig.h = the GALOP column of Table 1 |
-| engine | tests/cuda_evo_bench.cu | 83d310b29b8181d3888bf4f497a70180 |  | whole-run driver behind every timed GALOP row |
+| engine | tests/cuda_evo_bench.cu | b5c39e1678181e8816e10f56c8e0ed0e |  | whole-run driver behind every timed GALOP row |
 | engine | tests/cuda_diff.cu | a83aa93c4ca8db012a58b8ed813c30f4 |  | CPU-GPU differential test |
 | engine | tests/cuda_capacity.cu | 12095a4b6e598328527d02e355573440 |  | device-residency probe (2.56e9 on the H100, 448M on the RTX) |
 | engine | tests/test_bed.cpp | 1d0c8283aad416fb1235fb98933c3215 |  | unit tests (lgp_test) |
@@ -61,27 +61,31 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | producers | tools/cluster/speed_h100.sbatch | 2ff1dee012fd5f2dc0185f13fa57c134 |  | H100 grid + dedicated-session re-measurement + D extension + forced-hybrid arm + execute-mode fingerprint |
 | producers | tools/cluster/anchors_h100.sbatch | 0a24e330d8e7b1157008b4407fafd34f |  | SRGPU / Kozax / Beagle anchor grids |
 | producers | tools/cpu_anchor.sh | 3011467f08e09f873ea88adaa8c04e27 |  | GALOP and gplearn at the CPU-sentence cells |
-| producers | tools/speed_readout.py | ce22e47348cd7760ebbd69e4cb933944 |  | prints every Sec. 5.1 number from the CSVs |
+| producers | tools/speed_readout.py | 005b3ed7c2fddd35c6cc0dd97bc886e0 |  | prints every Sec. 5.1 number from the CSVs |
 | producers | tools/occupancy_probe.sh | 4d0ee7193b091173731c8ad7499bddaf |  | achieved occupancy of the block-per-individual and warp-per-individual kernels (Nsight Compute; the 47.3% -> 82.2% sentence) |
 | producers | tools/evogp_eval_once.py | 21797ec77a062af38c9560d81a8659b2 |  | EvoGP fitness-kernel target used by the occupancy probe |
 | producers | tools/quality_galop.sh | 4581b3773d18dc76486d5a61bb9cf3a4 |  | GALOP quality runs, n=100 (fig5) |
+| producers | tools/host_share.sh | af7c83c40ce853075aa3af66f88e605a |  | where a run's time goes as P grows: the evaluator call split (packing, buffer growth, H2D, kernel, D2H) and the host work by phase; D=32 and 1,024 at P=1e3-1e6, D=32,768 at P=1e5; five seeds (Sec. 5.1) |
+| producers | tools/cluster/breakdown_h100.sbatch | 32c8ae3e3e5e202feff19141ad6d4746 |  | the same split on one H100 at D in {32, 1,024, 32,768} x P=1e3-1e6 (Sec. 5.1) |
+| producers | tools/occupancy_vs_p.sh | 5dbdc1a47ae16628f8724ad9f09cea43 |  | achieved occupancy of the warp kernel vs P (Nsight Compute; needs GPU-counter permissions) |
+| producers | tools/effective_length.sh | 281b2284f1ee2747f86767ca59f3b406 |  | effective program length on the quality workloads at P=1e5, n=100, each run checked against its quality row (Sec. 5.3) |
 | producers | tools/quality_evogp.sh | d321204cfd11a0997d7dbf3809fe220f |  | EvoGP references, same cells (fig5) |
 | producers | tools/quality_sensitivity.sh | 40acd5edb9397ba0775c165916b06451 |  | EvoGP under its published example configuration |
 | producers | tools/cluster/quality_h100.sbatch | 1ca6136c76ab813b24ed951a0575b5a6 |  | SRGPU / Kozax / Beagle quality |
 | producers | tools/matched_verdicts.py | 20d9f20b524d317ff3548e40b97fff2c |  | the 22-cell MW-U + Holm + A12 scoreboard |
 | producers | tools/quality_readout.py | a83b39b959998d8a910304362ba7dc34 |  | prints every Sec. 5.2 number from the CSVs |
-| producers | tools/cluster/capacity_h100.sbatch | c0bf23fa9348fce74abfbec0fa6bf4f4 |  | the one-criterion ladder, all five systems (fig6a) |
+| producers | tools/cluster/capacity_h100.sbatch | ecbd39ffd326bf65dff7823da27d4d8c |  | the one-criterion ladder, all five systems (fig6a) |
 | producers | tools/cluster/residency_h100.sbatch | 204fd3791618d291c67b36b460082f1f |  | device-residency probe, H100 |
 | producers | tools/residency_rtx.py | 72c62a2e26093d5a9fbdf92a97a902ce |  | device-residency probe, RTX |
-| producers | tools/cluster/scale_h100.sbatch | d1d28c4d884447dc557f0afc76507986 |  | P=1e8 x 100 generations: GALOP (16 and 48 threads) and Beagle (fig6b) |
+| producers | tools/cluster/scale_h100.sbatch | c3e2e6a82355bbf1504a783d10a2140c |  | P=1e8 x 100 generations: GALOP (16 and 48 threads) and Beagle (fig6b); STAGE=p1e9: P=1e9 x 100 generations, intron-removed layout |
 | producers | tools/scale_rtx.sh | 1029b91122a3e2dfc25f84e56c833a62 |  | P=3.2e7 x 100 generations on the RTX |
 | producers | tools/cluster/beagle_wall_h100.sbatch | 0e8e7259cab21f0eb3ba1d503b247828 |  | Beagle wall attribution |
-| producers | tools/capacity_readout.py | 2eac3c66d244e726f0b24d9489bc4aed |  | prints every Sec. 5.3 number from the CSVs |
+| producers | tools/capacity_readout.py | 871f77cc234ca9b5221f032ee5a9f691 |  | prints every Sec. 5.3 number from the CSVs |
 | producers | tools/footprint/ | dir: 6 files | | Table 3: each system's initial program size and bytes per individual, from its own initializer |
-| producers | reproduce.sh | 7203705c9be8cd5ed1d0beca56cb3d97 |  | the one entry point: check / numbers / figures / datasets + the experiment stages |
-| producers | REPRODUCE.md | fcdf2b8453740bf8591717ec56eb5633 |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
+| producers | reproduce.sh | b66101b3baf6d6c4d85c0b4ce6d57c6e |  | the one entry point: check / numbers / figures / datasets + the experiment stages |
+| producers | REPRODUCE.md | ff1f48deff62256dcaa0b7ff9452315d |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
 | producers | requirements.txt | d0c1f51727e6abb4f258de2e85c3a36e |  | Python env of the analysis path |
-| producers | README.md | 323cfda027bff00d6ee125aa3e39dea6 |  | public README |
+| producers | README.md | cabb464d659c82f4b846f7e8c1d1844c |  | public README |
 | producers | .gitignore | f93ca83fa165cb520203d97a46a28812 |  | build products and scratch |
 | data | results/speed_grid_rtx.csv | 5d9ccbe04161d3c1793e07a051157230 | 120 | RTX 5070 Ti pair grid (fig3a, Table 2) |
 | data | results_h100/speed_grid_h100.csv | 40a600ddee3b01667b299d8bd27daddd | 160 | H100 pair grid (fig3b, Table 2); the two re-measured P=1e3 cells carry session=redo |
@@ -94,20 +98,25 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | data | results/occupancy/galop_warp.csv | b9a5c9158758645d944dbd767f6351c3 | 20 | achieved occupancy, 8 warps per 256-thread block (82.2%) |
 | data | results/occupancy/evogp.csv | eddaba47b3cd9aca16d298c0887efacf | 7 | achieved occupancy of EvoGP's fitness kernel (context) |
 | data | results/quality_galop_rtx.csv | 9bee47ee13b0883e4cfb64274d7c35d7 | 3100 | GALOP quality runs: Nguyen 1-6 x {1e3,1e4,1e5}, California/Feynman x {1e4,1e5}, Nguyen 9/10/12 (fig5, Sec. 5.2) |
+| data | results/host_share_rtx.csv | 6093e9b75802f5c1ea63bf843a86f9c8 | 45 | time split of 100-generation runs on the RTX: evaluator call (packing, buffer growth, H2D, kernel, D2H) and host work by phase (Sec. 5.1) |
+| data | results_h100/breakdown_h100.csv | 83bf30e22c7bd7826982729d08bcdb6b | 80 | the same split on the H100 at D in {32, 1,024, 32,768} x P=1e3-1e6 (Sec. 5.1) |
+| data | results/effective_length_rtx.csv | 193630e20b50e7830746a72840bbbc61 | 1100 | mean and effective program length at generation 100 of the P=1e5 quality runs (Sec. 5.3) |
 | data | results/quality_evogp_rtx.csv | 92107ee21d74776d03fb31bdc7db80b6 | 3100 | EvoGP references, same cells (fig5) |
 | data | results/quality_sensitivity_rtx.csv | 35b9ed1587065387136c42f2592d5600 | 800 | EvoGP under its published example configuration, P=1e4 |
 | data | results_h100/quality_anchors_h100.csv | daea509809008c99fe4ef1c1826e6813 | 521 | SRGPU / Kozax quality incl. Nguyen 9/10/12 |
 | data | results_h100/quality_beagle_h100.csv | 760beb0a5ce2c9cfe051867e70343b22 | 3000 | Beagle quality, scored by its own VM |
-| data | results_h100/capacity_h100.csv | 4291fd51bb1acf61de45c32dbc8648dc | 26 | the one-criterion ladder, all five systems (fig6a, Sec. 5.3); node and date per row |
+| data | results_h100/capacity_h100.csv | 8a0be1f4ef59a8675b8fc64cf1bda90a | 39 | the one-criterion ladder, all five systems (fig6a, Sec. 5.3); node and date per row |
 | data | results_h100/residency_h100.csv | 28841902adc9f820ddf98465c0e0b16e | 11 | device-residency probe, H100 (2.56e9; 1.15e9 evals/s) |
 | data | results/residency_rtx.csv | bc8e6759091aedeaf90dcfeac67224b6 | 40 | device-residency probe, RTX (448 M) |
-| data | results_h100/scale_h100.csv | f544058f54ac2049482764914e5c847b | 16 | P=1e8 x 100 generations: GALOP 16 and 48 host threads, Beagle (fig6b) |
+| data | results_h100/scale_h100.csv | 64e8f8c62b23e2207647adf970a684a0 | 31 | P=1e8 x 100 generations: GALOP 16 and 48 host threads, Beagle (fig6b); P=1e9 x 100 generations (intron-removed layout, with its 1e8 layout control) |
+| data | results_h100/scale_logs/ | dir: 60 files | | per-run logs of the P=1e9 and ceiling stages (efflog, memory trace, breakdown) |
 | data | results/scale_rtx.csv | 6b528020032d214ba21a985fdeef9296 | 5 | P=3.2e7 x 100 generations on the RTX (151.5 s) |
 | data | results_h100/beagle_wall_h100.txt | 1787090445ae6e1834be76651942e65c |  | Beagle wall attribution (int32 array sizing) |
 | data | results_h100/beagle_wall_h100.log | ed8f189add4cc3737c68b629567b3ecf |  | Beagle failing-rung log |
-| data | results_h100/capacity_logs/ | dir: 19 files | | per-rung logs of the cited ladder rungs (GALOP instruction totals per generation, SRGPU stderr) |
-| figures | report/plot_paper.py | 31ca1fded815ac96b8fc17cec8923b36 |  | renders fig3 (+ Table 2), fig5, fig6 from the CSVs above |
-| figures | report/figures/paper_short/fig3_wholerun_heatmaps.pdf | 2c54378fdc16cbfaa9382cc5ed3e9c5c |  |  |
-| figures | report/figures/paper_short/fig5_matched_quality.pdf | 6d627cd677c1a847417cb16026f01914 |  |  |
-| figures | report/figures/paper_short/fig6_capacity.pdf | 9ab9daca3b69e7ef8b99262823abb404 |  |  |
+| data | results_h100/capacity_logs/ | dir: 55 files | | per-rung logs of the cited ladder rungs (GALOP instruction totals per generation, SRGPU stderr) |
+| figures | report/plot_paper.py | 67cf60e049cab216aad8f74cc787f76a |  | renders fig3 (+ Table 2), fig5, fig6 from the CSVs above |
+| figures | report/figures/paper_short/fig3_wholerun_heatmaps.pdf | 652b6112ae4aa862c388052bded2902b |  |  |
+| figures | report/figures/paper_short/fig5_matched_quality.pdf | 82e5cf48c0842c18736182f4ee5f2354 |  |  |
+| figures | report/figures/paper_short/fig4_scaling.pdf | 40e97787c5c30840370a772ee833f123 |  | end-to-end scaling with P on the H100 at D=32 and 32,768 (median of five runs, min-max range) |
+| figures | report/figures/paper_short/fig6_capacity.pdf | 53df5c965d87b926d056789fd0f41e31 |  |  |
 | figures | report/figures/paper_short/tab_wholerun_abs.tex | 3dab2bbcfd5cba9bcc7bfb757d08bd67 |  | Table 2 |

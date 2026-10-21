@@ -2,6 +2,7 @@
 #define EVALUATOR_CUDA_H
 #include "EvalBackend.h"
 #include <vector>
+#include <cstdlib>
 #include <utility>
 #include "Dataset.h"
 #include <cstdint>
@@ -33,6 +34,14 @@ public:
     // D2H) -- everything else in a whole run is host-side evolution. Lets a
     // whole-run decompose into host vs eval without touching the CSV format.
     double eval_seconds() const { return eval_seconds_; }
+    // Split of eval_seconds() (GALOP_PHASE_TIMERS set; timing only, no behavioural effect):
+    // host packing of the population, (re)allocation of the packed buffers, host-to-device
+    // upload, kernel from launch to synchronize, fitness download.
+    double pack_seconds()   const { return pack_s_; }
+    double alloc_seconds()  const { return alloc_s_; }
+    double h2d_seconds()    const { return h2d_s_; }
+    double kernel_seconds() const { return kernel_s_; }
+    double d2h_seconds()    const { return d2h_s_; }
 
     // Per-call footprint log (one entry per evaluate_population call, i.e. per
     // generation): {Sigma L, Sigma L_eff} in instructions. L_eff is computed in
@@ -72,6 +81,8 @@ private:
     void ensure_packed_capacity(long long words);
     std::vector<std::pair<long long, long long>> footprint_log_;
     double eval_seconds_ = 0.0;
+    const bool timers_ = std::getenv("GALOP_PHASE_TIMERS") != nullptr;
+    double pack_s_ = 0.0, alloc_s_ = 0.0, h2d_s_ = 0.0, kernel_s_ = 0.0, d2h_s_ = 0.0;
 
     // ---- population buffers: allocated once, reused every generation ----
     uint32_t* d_instructions = nullptr;   // [TOTAL_INSTRUCTIONS]

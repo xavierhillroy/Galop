@@ -15,3 +15,18 @@ beagle,100000000,64,,1,OK,3258.128,births_g100=10243988496
 beagle,100000000,64,,2,OK,3320.944,births_g100=10256732819
 beagle,100000000,64,,3,OK,3283.992,births_g100=10275850383
 beagle,100000000,64,,4,OK,3270.976,births_g100=9922136393
+galop_eff,100000000,64,16,70,OK,333.7520,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=333.752s eval=107.165s (32.1%) host+other=226.587s
+galop_eff,100000000,64,16,71,OK,349.2289,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=349.229s eval=123.386s (35.3%) host+other=225.843s
+galop_eff,100000000,64,16,72,OK,331.1039,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=331.104s eval=117.306s (35.4%) host+other=213.798s
+galop_eff,1000000000,64,16,70,OK,4591.2759,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=4591.276s eval=1300.619s (28.3%) host+other=3290.657s
+galop_eff,1000000000,64,16,71,OK,4715.0825,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=4715.083s eval=1340.215s (28.4%) host+other=3374.868s
+galop_eff,2147483646,64,16,70,OK,10397.7200,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=10397.720s eval=3222.327s (31.0%) host+other=7175.392s
+galop_eff,1000000000,64,16,72,OK,4459.9397,intron-removed layout; 100 generations; no discarded warm-up; BREAKDOWN warp: total=4459.940s eval=1313.775s (29.5%) host+other=3146.165s
+galop_eff,100000000,64,16,74,OK,322.1104,intron-removed layout; 100 generations; no discarded warm-up; node g25; BREAKDOWN warp: total=322.110s eval=112.324s (34.9%) host+other=209.786s
+galop_eff,100000000,64,16,73,OK,385.4060,intron-removed layout; 100 generations; no discarded warm-up; node g24; BREAKDOWN warp: total=385.406s eval=119.945s (31.1%) host+other=265.461s
+galop_eff,1000000000,64,16,74,OK,3336.7995,intron-removed layout; 100 generations; no discarded warm-up; node g25; BREAKDOWN warp: total=3336.800s eval=1150.879s (34.5%) host+other=2185.920s
+galop_eff,1000000000,64,16,73,OK,4508.3655,intron-removed layout; 100 generations; no discarded warm-up; node g24; BREAKDOWN warp: total=4508.366s eval=1319.641s (29.3%) host+other=3188.725s
+galop_eff,2147483646,64,16,73,OK,7727.6069,intron-removed layout; 100 generations; no discarded warm-up; node g23; BREAKDOWN warp: total=7727.607s eval=2558.585s (33.1%) host+other=5169.021s
+galop_eff,2147483646,64,16,74,OK,7980.6826,intron-removed layout; 100 generations; no discarded warm-up; node g24; BREAKDOWN warp: total=7980.683s eval=2670.165s (33.5%) host+other=5310.518s
+galop_eff,2147483646,64,16,72,OK,8040.8675,intron-removed layout; 100 generations; no discarded warm-up; node g23; BREAKDOWN warp: total=8040.868s eval=2682.647s (33.4%) host+other=5358.220s
+galop_eff,2147483646,64,16,71,OK,8883.3366,intron-removed layout; 100 generations; no discarded warm-up; node g22; BREAKDOWN warp: total=8883.337s eval=2792.623s (31.4%) host+other=6090.714s
