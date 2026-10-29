@@ -85,10 +85,10 @@ else:
         ax.grid(which="minor", color="white", lw=1.5); ax.tick_params(which="minor", length=0)
         ax.tick_params(which="major", length=2)
         ax.set_xlabel("D (fitness cases)", fontsize=8, labelpad=2)
-        ax.set_title(t, fontsize=9, pad=4)
+        ax.set_title(f"({'ab'[list(axes).index(ax)]}) {t}", fontsize=9, pad=4)
     axes[1].tick_params(axis="y", labelleft=False)     # the two maps share the P rows
     cb = fig.colorbar(im, cax=cax)
-    cb.set_label("median speedup (>1 favours Galop)", fontsize=8)
+    cb.set_label("median speedup", fontsize=8)
     cb.ax.tick_params(labelsize=8, length=2)
     # ---- (c) the D extension, full width
     Dseq = [32, 1024, 32768, 131072, 262144, 524288]
@@ -126,16 +126,10 @@ else:
     axB.tick_params(which="major", length=2.5)
     axB.set_xlabel("D (fitness cases, log axis)", fontsize=8, labelpad=2)
     axB.set_ylabel("median speedup", fontsize=8)
-    axB.set_title("H100, extended D", fontsize=9, pad=4)
+    axB.set_title("(c) H100, extended D", fontsize=9, pad=4)
     axB.legend(fontsize=8, frameon=False, loc="upper right", handlelength=2.2)
     axB.grid(True, ls=":", alpha=0.3)
-    # Panel letters centred under each panel; the caption carries the protocol.
-    fig.canvas.draw()
-    _ren = fig.canvas.get_renderer()
-    for _ax, _lab in ((axes[0], "(a)"), (axes[1], "(b)"), (axB, "(c)")):
-        _bb = _ax.get_position()                                                      # axes box: horizontal centre
-        _tb = _ax.get_tightbbox(_ren).transformed(fig.transFigure.inverted())        # incl. tick labels and axis label: vertical anchor
-        fig.text((_bb.x0 + _bb.x1) / 2, _tb.y0 - 0.008, _lab, ha="center", va="top", fontsize=9)
+    # Panel letters are part of the titles; the caption carries the protocol.
     fig.savefig(f"{OUT}/fig3_wholerun.png", dpi=200, bbox_inches="tight")
     fig.savefig(f"{OUT}/fig3_wholerun_heatmaps.pdf", bbox_inches="tight"); plt.close(fig)
     # ---- Fig 4: end-to-end scaling with population on the H100 at two fitness-set sizes ------------
@@ -157,15 +151,11 @@ else:
         ax.set_xscale("log"); ax.set_yscale("log")
         ax.set_xticks(Ps, ["10³", "10⁴", "10⁵", "10⁶"], fontsize=8); ax.minorticks_off()
         ax.tick_params(axis="y", labelsize=8); ax.tick_params(length=2.5)
-        ax.set_title(f"D = {D:,}", fontsize=9, pad=4)
+        ax.set_title(f"({'ab'[list(axs).index(ax)]}) D = {D:,}", fontsize=9, pad=4)
         ax.set_xlabel("P (population, log scale)", fontsize=8, labelpad=2)
         ax.grid(True, ls=":", alpha=0.3)
-    axs[0].set_ylabel("wall-clock, 100 generations (s, log scale)", fontsize=8)
+    axs[0].set_ylabel("wall-clock (seconds, log scale)", fontsize=8)
     axs[0].legend(fontsize=8, frameon=False, loc="upper left", handlelength=2.0)
-    fig4.canvas.draw(); _ren4 = fig4.canvas.get_renderer()
-    for _ax, _lab in zip(axs, ("(a)", "(b)")):
-        _bb = _ax.get_position(); _tb = _ax.get_tightbbox(_ren4).transformed(fig4.transFigure.inverted())
-        fig4.text((_bb.x0 + _bb.x1) / 2, _tb.y0 - 0.02, _lab, ha="center", va="top", fontsize=9)
     fig4.savefig(f"{OUT}/fig4_scaling.png", dpi=200, bbox_inches="tight")
     fig4.savefig(f"{OUT}/fig4_scaling.pdf", bbox_inches="tight"); plt.close(fig4)
     # Companion table: ABSOLUTE median wall-clock (s) behind the fig3 ratios, both
@@ -295,10 +285,11 @@ fig, (a1, a2) = plt.subplots(1, 2, figsize=(10.2, 4.0 + 0.45 * _n_cap50), layout
                              gridspec_kw={"width_ratios": [3, 2.5]})
 b = a1.barh(sysn, caps, color=cols6, height=0.6)
 for _bar in list(b)[len(b) - _n_cap50:]: _bar.set_hatch("///"); _bar.set_edgecolor("white")
-a1.set_xscale("log"); a1.set_xlim(8e3, 3e10)
+# linear axis (X, 2026-10-21): the ceilings compare by length; the small systems read from their labels
+a1.set_xlim(0, 2.75e9); a1.set_xticks([0, 5e8, 1e9, 1.5e9, 2e9, 2.5e9], ["0", "0.5 B", "1 B", "1.5 B", "2 B", "2.5 B"])
 for r, c, l in zip(b, caps, clab):   # value labels outside every bar; the limiting mechanism is in the text, not the figure
-    a1.text(c*1.12, r.get_y() + r.get_height()/2, l, va="center", fontsize=10, weight="bold")
-a1.set_xlabel("maximum population completing one generation, 80 GB H100 (log)", fontsize=10.5)
+    a1.text(c + 3e7, r.get_y() + r.get_height()/2, l, va="center", fontsize=10, weight="bold")
+a1.set_xlabel("(a) maximum population, 80 GB H100", fontsize=10.5)   # panel letters lead the axis labels
 a1.tick_params(axis="x", labelsize=10.5); a1.tick_params(axis="y", labelsize=11)
 # (b) sustained 100-generation runs (scale_h100.csv), linear wall-clock axis. Light bar and marker =
 # median of the timed runs, whisker = observed minimum to maximum. No line joins the rows: the runs
@@ -325,14 +316,9 @@ a2.set_yticks(range(len(_rowsb))); a2.set_yticklabels([_r[0] for _r in _rowsb])
 a2.set_xlim(0, 13200); a2.set_xticks([0, 3000, 6000, 9000, 12000])
 a2.set_xticklabels(["0", "3,000", "6,000", "9,000", "12,000"])
 a2.set_ylim(-0.6, 3.6)
-a2.set_xlabel("wall-clock for 100 generations, H100 (s)", fontsize=10.5)
+a2.set_xlabel("(b) wall-clock for 100 generations, H100 (s)", fontsize=10.5)
 a2.tick_params(axis="x", labelsize=10.5); a2.tick_params(axis="y", labelsize=11)
 for a in (a1, a2): a.grid(True, axis="x", ls=":", alpha=0.3)
-# no panel titles (2026-09-16): the caption carries the protocol; letters on one baseline
-fig.canvas.draw()
-_bot = min(_a.get_position().y0 for _a in (a1, a2))
-for _ax, _lab in ((a1, "(a)"), (a2, "(b)")):
-    _bb = _ax.get_position()
-    fig.text((_bb.x0 + _bb.x1) / 2, _bot - 0.13, _lab, ha="center", va="top", fontsize=10)
+# the panel letters lead the x-axis labels (2026-10-21); the caption carries the protocol
 fig.savefig(f"{OUT}/fig6_capacity.png", dpi=170, bbox_inches="tight")
 fig.savefig(f"{OUT}/fig6_capacity.pdf", bbox_inches="tight"); plt.close(fig)

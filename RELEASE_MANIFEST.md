@@ -1,4 +1,4 @@
-# Release manifest — built 2026-10-21
+# Release manifest — built 2026-10-29
 
 md5 = of the staged file; rows = CSV data rows. Result files are shipped unedited.
 
@@ -83,7 +83,7 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | producers | tools/capacity_readout.py | 871f77cc234ca9b5221f032ee5a9f691 |  | prints every Sec. 5.3 number from the CSVs |
 | producers | tools/footprint/ | dir: 6 files | | Table 3: each system's initial program size and bytes per individual, from its own initializer |
 | producers | reproduce.sh | b66101b3baf6d6c4d85c0b4ce6d57c6e |  | the one entry point: check / numbers / figures / datasets + the experiment stages |
-| producers | REPRODUCE.md | ff1f48deff62256dcaa0b7ff9452315d |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
+| producers | REPRODUCE.md | 4da9d082c1e5e6aad03bbae6206a4c92 |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
 | producers | requirements.txt | d0c1f51727e6abb4f258de2e85c3a36e |  | Python env of the analysis path |
 | producers | README.md | cabb464d659c82f4b846f7e8c1d1844c |  | public README |
 | producers | .gitignore | f93ca83fa165cb520203d97a46a28812 |  | build products and scratch |
@@ -114,9 +114,9 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | data | results_h100/beagle_wall_h100.txt | 1787090445ae6e1834be76651942e65c |  | Beagle wall attribution (int32 array sizing) |
 | data | results_h100/beagle_wall_h100.log | ed8f189add4cc3737c68b629567b3ecf |  | Beagle failing-rung log |
 | data | results_h100/capacity_logs/ | dir: 55 files | | per-rung logs of the cited ladder rungs (GALOP instruction totals per generation, SRGPU stderr) |
-| figures | report/plot_paper.py | 67cf60e049cab216aad8f74cc787f76a |  | renders fig3 (+ Table 2), fig5, fig6 from the CSVs above |
-| figures | report/figures/paper_short/fig3_wholerun_heatmaps.pdf | 652b6112ae4aa862c388052bded2902b |  |  |
+| figures | report/plot_paper.py | 24a02cb700b998af6e2530b38f536ad0 |  | renders fig3 (+ Table 2), fig5, fig6 from the CSVs above |
+| figures | report/figures/paper_short/fig3_wholerun_heatmaps.pdf | ab1b4fb1ee8622f9d4302365422a2266 |  |  |
 | figures | report/figures/paper_short/fig5_matched_quality.pdf | 82e5cf48c0842c18736182f4ee5f2354 |  |  |
-| figures | report/figures/paper_short/fig4_scaling.pdf | 40e97787c5c30840370a772ee833f123 |  | end-to-end scaling with P on the H100 at D=32 and 32,768 (median of five runs, min-max range) |
-| figures | report/figures/paper_short/fig6_capacity.pdf | 53df5c965d87b926d056789fd0f41e31 |  |  |
+| figures | report/figures/paper_short/fig4_scaling.pdf | 061f94cb9b653119e47cc6e91e25993a |  | end-to-end scaling with P on the H100 at D=32 and 32,768 (median of five runs, min-max range) |
+| figures | report/figures/paper_short/fig6_capacity.pdf | f5c8a7a30a76375f49cff3616ed8f5e8 |  |  |
 | figures | report/figures/paper_short/tab_wholerun_abs.tex | 3dab2bbcfd5cba9bcc7bfb757d08bd67 |  | Table 2 |

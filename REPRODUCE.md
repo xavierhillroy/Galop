@@ -32,8 +32,14 @@ report/plot_paper.py                the paper's figures from the CSVs
 - **Cluster track** (H100 grid, anchors, anchor quality, capacity): SLURM, one
   NVIDIA H100 80 GB per job — paper: `module load StdEnv/2023 python/3.11 cuda`,
   venvs `.venv_cluster` (torch/EvoGP, created by `tools/cluster/setup_login.sh`) and
-  `~/.venv_kozax` (jax + kozax). Edit the module/venv lines at the top of a job for
-  another cluster. Submit from the login node at the repository root.
+  `~/.venv_kozax` (jax + kozax). Submit from the login node at the repository root.
+  The jobs carry no allocation or partition: if your cluster requires them, export
+  `SBATCH_ACCOUNT=<allocation>` (and `SBATCH_PARTITION=<partition>` if needed) before
+  `./reproduce.sh`; SLURM reads both from the environment, so no job needs editing.
+  For another cluster, edit the module/venv lines at the top of a job, the
+  `--gres=gpu:h100:1` line if your site names its H100s differently, and check that
+  the `--mem` / `--cpus-per-task` requests (up to 1000 GB and 48 CPUs for the
+  capacity rungs) match a node you can get.
 - **Baselines**: EvoGP at the pinned commit; Kozax 0.1.4 (pip) via `~/.venv_kozax`; SRGPU from
   the retained source snapshot at `~/galop_srgpu_src` (`tools/baselines/setup_srgpu.sh`;
   upstream is no longer public, snapshot on request); Beagle stock checkout at
