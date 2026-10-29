@@ -29,6 +29,7 @@ report/plot_paper.py                the paper's figures from the CSVs
   CUDA 13.1 (`nvcc` on PATH, or set `NVCC=`), gcc with OpenMP; Python 3.12 with
   `requirements.txt` (`PYTHON=` overrides the default `.venv/bin/python`);
   torch 2.9.0+cu130 and EvoGP built from source at commit `5538d75` for the EvoGP arms.
+  Set-up and what each stage needs: "Running the local track" below.
 - **Cluster track** (H100 grid, anchors, anchor quality, capacity): SLURM, one
   NVIDIA H100 80 GB per job — paper: an Alliance (DRAC) cluster, `module load
   StdEnv/2023 python/3.11 cuda/13.2`, host venv `.venv_cluster` (torch from the
@@ -40,6 +41,80 @@ report/plot_paper.py                the paper's figures from the CSVs
   `~/beagle_stock` (commit `f96a2d1`, `tools/baselines/setup_beagle.sh`) with the
   adapter installed by `tools/beagle_adapter/install_beagle_adapter.sh`. **No baseline
   engine is modified**: adapters and harnesses only.
+
+## Running the local track
+
+Everything runs on one machine with one CUDA GPU, from the repository root. Each
+stage compiles its own binaries with `-arch=native`, i.e. for the GPU that is
+present, so there is nothing to configure for the card. The timed stages assume
+the machine is otherwise idle.
+
+1. **Toolchain.** A CUDA toolkit whose `nvcc` accepts `-std=c++20` (paper: 13.1),
+   gcc with OpenMP (paper: 13.3), `make`, and for the EvoGP build the Python
+   headers (`python3-dev` on Debian/Ubuntu). `nvidia-smi` must list the GPU. If
+   `nvcc` is not on `PATH` the scripts look in `/usr/local/cuda/bin`; `NVCC=<path>`
+   overrides.
+
+2. **Python environment (once).** The analysis path:
+
+   ```
+   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+   ```
+
+   This is enough for `numbers`, `figures`, `datasets` and `cpu-anchor`. The
+   stages with an EvoGP arm (`speed-rtx`, `quality-rtx`, `residency-rtx`) also
+   need torch and EvoGP in the same venv: a torch wheel whose CUDA major version
+   matches your `nvcc` (paper: 2.9.0+cu130), then EvoGP built from source at the
+   pinned commit against that torch:
+
+   ```
+   .venv/bin/pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cu130
+   .venv/bin/pip install setuptools wheel ninja
+   .venv/bin/pip install --no-build-isolation git+https://github.com/EMI-Group/evogp.git@5538d75470ee0fa444ee6bbe5ea98b2eed6e99f8
+   .venv/bin/python -c "import torch, evogp; print(torch.__version__, torch.cuda.is_available())"
+   ```
+
+   `PYTHON=<interpreter>` points every stage at another environment.
+
+3. **Gate first.**
+
+   ```
+   ./reproduce.sh check
+   ```
+
+   Builds the GPU binaries and the CPU tests, runs the CPU-vs-GPU differential
+   test, the unit tests and the golden regression (~5 min). `cuda_diff` is the
+   binding correctness gate; the golden gate compares against histories recorded
+   with the paper's toolchain, and a mismatch there on a different compiler is
+   not by itself a defect.
+
+4. **The quick path (seconds).** `./reproduce.sh numbers` and `./reproduce.sh
+   figures` recompute every number, table and figure from the shipped CSVs in
+   `results/` and `results_h100/`; `./reproduce.sh datasets` regenerates every
+   dataset and prints the md5s to compare with the list below (its California
+   Housing file is fetched by scikit-learn the first time, so that stage needs
+   internet once).
+
+5. **Re-measuring.** Each stage writes one CSV under `results/` and is
+   resume-safe: a rerun fills only the missing rows, so a stage run on top of the
+   shipped file does nothing. To re-measure, move the shipped CSV aside first.
+   `./reproduce.sh local-all` runs every local stage in order (about 15 h).
+
+   | stage | needs | about |
+   |---|---|---|
+   | `speed-rtx` | GPU idle; `.venv` with torch + EvoGP | 3 h |
+   | `host-share-rtx` | GPU idle | 12 min |
+   | `quality-rtx` | GPU; `.venv` with torch + EvoGP | 9 h |
+   | `effective-length-rtx` | GPU; `results/quality_galop_rtx.csv` (shipped or re-measured) | 40–60 min |
+   | `cpu-anchor` | GPU idle; `.venv` (gplearn) | 1 h |
+   | `residency-rtx` | GPU; `.venv` with torch + EvoGP | 10 min |
+   | `flagship-rtx` | GPU idle; ~22 GB of free host RAM (checked by the script) | 15 min |
+
+6. **Another GPU.** The stages build for whatever card is present, so they run on
+   any CUDA GPU; the wall-clocks then belong to that card, not the paper's
+   (ratios and orderings are the claims, see "What to expect"), `residency-rtx`
+   reports that card's ceiling, and `flagship-rtx` is sized by host RAM
+   (P=3.2e7 peaks near 20 GB on the host).
 
 ## Running the cluster track
 

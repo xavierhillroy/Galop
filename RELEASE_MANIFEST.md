@@ -83,7 +83,7 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | producers | tools/capacity_readout.py | 871f77cc234ca9b5221f032ee5a9f691 |  | prints every Sec. 5.3 number from the CSVs |
 | producers | tools/footprint/ | dir: 6 files | | Table 3: each system's initial program size and bytes per individual, from its own initializer |
 | producers | reproduce.sh | b66101b3baf6d6c4d85c0b4ce6d57c6e |  | the one entry point: check / numbers / figures / datasets + the experiment stages |
-| producers | REPRODUCE.md | 76a739f1d48705b1050b6a372166354e |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
+| producers | REPRODUCE.md | a9af0c3ba90594e1070f22ac502b5933 |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
 | producers | requirements.txt | d0c1f51727e6abb4f258de2e85c3a36e |  | Python env of the analysis path |
 | producers | README.md | cabb464d659c82f4b846f7e8c1d1844c |  | public README |
 | producers | .gitignore | f93ca83fa165cb520203d97a46a28812 |  | build products and scratch |
