@@ -10,7 +10,7 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | engine | tests/cuda_capacity.cu | 12095a4b6e598328527d02e355573440 |  | device-residency probe (2.56e9 on the H100, 448M on the RTX) |
 | engine | tests/test_bed.cpp | 1d0c8283aad416fb1235fb98933c3215 |  | unit tests (lgp_test) |
 | engine | Makefile | 1d93a601b984fced728ca1e7a534b27b |  | trimmed in the copy to the shipped targets |
-| engine | LICENSE | eb1e647870add0502f8f010b19de32af |  |  |
+| engine | LICENSE | 3b83ef96387f14655fc854ddc3c6bd57 |  |  |
 | engine | golden/ | dir: 19 files | | golden CPU regression histories |
 | engine | tools/check_golden.sh | de962569b7f199eefa4fb7f462f132c7 |  | golden regression gate (builds lgp_run, diffs against golden/) |
 | engine | datasets/nguyen1_train.csv | 12db051ece0ca6cfa65ecc5a12ebe0e4 | 32 | inputs of the golden gate |
@@ -85,7 +85,7 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | producers | reproduce.sh | b66101b3baf6d6c4d85c0b4ce6d57c6e |  | the one entry point: check / numbers / figures / datasets + the experiment stages |
 | producers | REPRODUCE.md | a9af0c3ba90594e1070f22ac502b5933 |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
 | producers | requirements.txt | d0c1f51727e6abb4f258de2e85c3a36e |  | Python env of the analysis path |
-| producers | README.md | cabb464d659c82f4b846f7e8c1d1844c |  | public README |
+| producers | README.md | f0074a4824cb4e2bea789bb99fe821f7 |  | public README |
 | producers | .gitignore | f93ca83fa165cb520203d97a46a28812 |  | build products and scratch |
 | data | results/speed_grid_rtx.csv | 5d9ccbe04161d3c1793e07a051157230 | 120 | RTX 5070 Ti pair grid (fig3a, Table 2) |
 | data | results_h100/speed_grid_h100.csv | 40a600ddee3b01667b299d8bd27daddd | 160 | H100 pair grid (fig3b, Table 2); the two re-measured P=1e3 cells carry session=redo |

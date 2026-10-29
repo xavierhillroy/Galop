@@ -45,4 +45,4 @@ paper and in REPRODUCE.md.
 
 ## License
 
-See [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE).
