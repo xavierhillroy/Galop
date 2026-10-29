@@ -30,12 +30,14 @@ pip install --no-index torch scipy    # DRAC provides CUDA torch wheels locally
 
 # --- EvoGP: clone here (internet), build here (nvcc works without a GPU if
 #     we tell torch the target arch instead of letting it query the device) ---
-git clone --depth 1 https://github.com/EMI-Group/evogp.git /tmp/evogp_src_$USER || true
+EVOGP_SRC=/tmp/evogp_src_$USER
+[ -d $EVOGP_SRC ] || git clone https://github.com/EMI-Group/evogp.git $EVOGP_SRC
+git -C $EVOGP_SRC checkout -q 5538d75          # the pinned commit (REPRODUCE.md)
 # torch cpp_extension needs CUDA_HOME (set by the cuda module) -- fail loudly if
 # this script is run in a shell without the modules loaded.
 : "${CUDA_HOME:?CUDA_HOME unset -- run 'module load StdEnv/2023 cuda python/3.11' first}"
 TORCH_ARCH=$( [ "$ARCH" = "sm_90" ] && echo "9.0" || echo "8.0" )
-TORCH_CUDA_ARCH_LIST="$TORCH_ARCH" pip install --no-build-isolation /tmp/evogp_src_$USER
+TORCH_CUDA_ARCH_LIST="$TORCH_ARCH" pip install --no-build-isolation $EVOGP_SRC
 
 python -c "import torch, evogp; print('torch', torch.__version__, '| evogp OK')"
 
@@ -47,4 +49,5 @@ tools/check_golden.sh | tail -1 || echo "NOTE: golden mismatch on a different \
 toolchain is a DOCUMENTED possibility (byte-exactness is compiler-specific); \
 cuda_diff in the job is the binding correctness gate."
 
-echo "LOGIN SETUP DONE. Submit with: sbatch tools/cluster/replicate.sbatch"
+echo "LOGIN SETUP DONE. Next: export SBATCH_ACCOUNT=<allocation> if your site needs one,"
+echo "then ./reproduce.sh <stage>  (REPRODUCE.md, 'Running the cluster track')."

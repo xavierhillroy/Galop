@@ -30,22 +30,104 @@ report/plot_paper.py                the paper's figures from the CSVs
   `requirements.txt` (`PYTHON=` overrides the default `.venv/bin/python`);
   torch 2.9.0+cu130 and EvoGP built from source at commit `5538d75` for the EvoGP arms.
 - **Cluster track** (H100 grid, anchors, anchor quality, capacity): SLURM, one
-  NVIDIA H100 80 GB per job — paper: `module load StdEnv/2023 python/3.11 cuda`,
-  venvs `.venv_cluster` (torch/EvoGP, created by `tools/cluster/setup_login.sh`) and
-  `~/.venv_kozax` (jax + kozax). Submit from the login node at the repository root.
-  The jobs carry no allocation or partition: if your cluster requires them, export
-  `SBATCH_ACCOUNT=<allocation>` (and `SBATCH_PARTITION=<partition>` if needed) before
-  `./reproduce.sh`; SLURM reads both from the environment, so no job needs editing.
-  For another cluster, edit the module/venv lines at the top of a job, the
-  `--gres=gpu:h100:1` line if your site names its H100s differently, and check that
-  the `--mem` / `--cpus-per-task` requests (up to 1000 GB and 48 CPUs for the
-  capacity rungs) match a node you can get.
+  NVIDIA H100 80 GB per job — paper: an Alliance (DRAC) cluster, `module load
+  StdEnv/2023 python/3.11 cuda/13.2`, host venv `.venv_cluster` (torch from the
+  site wheelhouse, EvoGP built from source). Set-up and submission, step by step:
+  "Running the cluster track" below.
 - **Baselines**: EvoGP at the pinned commit; Kozax 0.1.4 (pip) via `~/.venv_kozax`; SRGPU from
   the retained source snapshot at `~/galop_srgpu_src` (`tools/baselines/setup_srgpu.sh`;
   upstream is no longer public, snapshot on request); Beagle stock checkout at
   `~/beagle_stock` (commit `f96a2d1`, `tools/baselines/setup_beagle.sh`) with the
   adapter installed by `tools/beagle_adapter/install_beagle_adapter.sh`. **No baseline
   engine is modified**: adapters and harnesses only.
+
+## Running the cluster track
+
+Two facts shape every step. The login node has internet but no GPU; the compute
+nodes have a GPU but no internet. So everything that downloads happens once on
+the login node, and everything that needs the GPU (compiling the CUDA binaries
+with `-arch=native`, every measurement) happens inside a job. Each job compiles
+its own binaries on its node, so nothing GPU-side is built by hand. (`./reproduce.sh
+check` is a local-GPU stage: on a login node it stops with "no CUDA devices".)
+
+1. **Set up (login node, once, ~15 min).** From the root of a fresh clone:
+
+   ```
+   bash tools/cluster/setup_login.sh sm_90        # sm_80 for an A100
+   ```
+
+   This loads `StdEnv/2023 python/3.11 cuda/13.2`, creates `.venv_cluster` with
+   torch and scipy from the site wheelhouse and EvoGP built from source at the
+   pinned commit `5538d75`, compiles the CPU-side tests and dataset generators,
+   and runs the golden gate. It is all the GALOP and EvoGP jobs need:
+   `speed-h100`, `breakdown-h100`, `residency-h100`, the `galop` / `cap50` /
+   `evogp` stages of `capacity-h100` and the `galop` stage of `scale-h100`.
+
+2. **Anchor systems (login node, once; skip unless you run `anchors-h100`,
+   `quality-h100`, the `beagle` stage of `scale-h100`, `beagle_wall`, or the
+   `kozax` / `beagle` / `srgpu` stages of `capacity-h100`).** The jobs expect the
+   three installs at fixed paths under `$HOME`:
+
+   ```
+   # Kozax 0.1.4: the jobs activate ~/.venv_kozax under python/3.13 + cuda/12.6
+   module load StdEnv/2023 python/3.13 cuda/12.6
+   python -m venv ~/.venv_kozax && source ~/.venv_kozax/bin/activate
+   pip install --no-index jax jaxlib jax_cuda12_plugin jax_cuda12_pjrt jaxtyping optax sympy
+   pip install kozax==0.1.4 --no-deps
+   deactivate
+
+   # Beagle: the stock checkout at commit f96a2d1 plus the adapter (engine untouched)
+   curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0
+   export PATH=$HOME/.dotnet:$PATH DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+   git clone https://github.com/Noblis/beagle-v1.x ~/beagle_stock && git -C ~/beagle_stock checkout f96a2d1
+   bash tools/beagle_adapter/install_beagle_adapter.sh ~/beagle_stock
+
+   # SRGPU: upstream is no longer public. Put the retained snapshot (on request,
+   # commit e7f0eb8) at ~/galop_srgpu_src; the jobs patch and build it themselves.
+   ```
+
+3. **Allocation and partition (login shell, each session).** The job files carry
+   neither. If your cluster requires them, export them before submitting; SLURM
+   reads both from the environment, so no job file is edited:
+
+   ```
+   export SBATCH_ACCOUNT=def-yourprof             # and SBATCH_PARTITION=<partition> if needed
+   ```
+
+4. **Submit (login node, repository root).** A stage submits one or more jobs;
+   `STAGE=` runs one part of a job (the parts are listed in the stage table and at
+   the top of each job file):
+
+   ```
+   ./reproduce.sh speed-h100                                        # one stage
+   ./reproduce.sh h100-all                                          # every cluster job
+   sbatch --export=ALL,STAGE=grid tools/cluster/speed_h100.sbatch   # one part of one job
+   ```
+
+   Every GALOP job first compiles its binaries on its node and runs the quick
+   `cuda_diff` gate, then measures. Rows are appended to `results_h100/*.csv`;
+   SLURM output goes to `results_h100/*_slurm_<jobid>.log` / `.err`. Producers are
+   resume-safe: a job that times out or is killed is simply resubmitted, and a
+   stage submitted on top of the shipped CSV does nothing. To re-measure, move the
+   shipped CSV aside first.
+
+5. **Read the results.** `./reproduce.sh numbers` and `figures` run wherever the
+   CSVs are: at home after `rsync -av <cluster>:<clone>/results_h100/ results_h100/`,
+   or on the login node with `PYTHON=.venv_cluster/bin/python` (`figures` also
+   needs `pip install --no-index matplotlib` in that venv). The jobs append to
+   tracked files in the clone: copy them out before any `git reset --hard` there,
+   and never reset while a job runs.
+
+6. **Another cluster.** Three places to adapt. In `tools/cluster/setup_login.sh`,
+   the module line and the `--no-index` installs (the Alliance wheelhouse):
+   elsewhere drop `--no-index` and install a torch that matches the CUDA module.
+   In each job file, the `module load` lines and `#SBATCH --gres=gpu:h100:1`
+   (whatever your site calls its H100s). And the resource requests: most jobs ask
+   for 16 CPUs and 250 GB; `breakdown` 64 GB, `residency` 8 CPUs / 120 GB,
+   `capacity` and `beagle_wall` 1000 GB, `scale` 48 CPUs (its optional `p1e9` /
+   `pcap` stages are submitted with `--mem=600G` / `--mem=1000G`). Match them to a
+   node you can get; the capacity criterion itself is defined at 1 TB of host
+   memory, so a smaller node changes which wall that stage reports.
 
 ## Stages
 
@@ -142,6 +224,3 @@ ba01499e506ba1c6eed44e7786240527  ext/nguyen10_train.csv    7bcf4f5c1e69da3d8b6e
 | timing medians | within a few percent session to session (RTX ±5–10% across sessions; H100 0.95–1.08× across sessions); ratios and orderings are the claims, not digits |
 | ceilings / walls | same wall class at the same or adjacent rung |
 | Beagle | distributions only (no seed control, by its design) |
-
-Cluster note: jobs append to tracked CSVs. Sync results before any `git reset --hard`
-on the cluster clone, and never reset while a job runs.

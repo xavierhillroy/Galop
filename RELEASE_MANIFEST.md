@@ -46,7 +46,7 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | datasets | tools/gen_ext_datasets.py | b301a1a43e1b91f42fc74e7f64c57d76 |  | their generator |
 | baselines | harness/evogp_run.py | d81a2bdbf8f7102d0f3da100ff6aca3f |  | EvoGP built under the parity configuration; imported by every EvoGP arm |
 | baselines | harness/run.py | ff7881c206a12fdb761ab73c34355bc1 |  | schema helpers imported by evogp_run.py |
-| baselines | tools/cluster/setup_login.sh | 039ba3e5a8e1f33600950f27bd699c38 |  | EvoGP built from source at commit 5538d75 (cluster venv) |
+| baselines | tools/cluster/setup_login.sh | 92067c36b4006d5512aa7aeae6e860c4 |  | EvoGP built from source at commit 5538d75 (cluster venv) |
 | baselines | tools/baselines/setup_srgpu.sh | dd18829230a50b1d4a5b58ea26ccd43c |  | SRGPU checkout (upstream now 404: retained snapshot on request) |
 | baselines | tools/baselines/srgpu_bench.cu | 7dda0ee8f37fe03ccaf440eb201ed108 |  | SRGPU harness (grid, quality, ceiling) |
 | baselines | tools/baselines/kozax_bench.py | cc2d7b2d2318c07b80c7d3eaa48f353c |  | Kozax harness |
@@ -83,7 +83,7 @@ md5 = of the staged file; rows = CSV data rows. Result files are shipped unedite
 | producers | tools/capacity_readout.py | 871f77cc234ca9b5221f032ee5a9f691 |  | prints every Sec. 5.3 number from the CSVs |
 | producers | tools/footprint/ | dir: 6 files | | Table 3: each system's initial program size and bytes per individual, from its own initializer |
 | producers | reproduce.sh | b66101b3baf6d6c4d85c0b4ce6d57c6e |  | the one entry point: check / numbers / figures / datasets + the experiment stages |
-| producers | REPRODUCE.md | 4da9d082c1e5e6aad03bbae6206a4c92 |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
+| producers | REPRODUCE.md | 76a739f1d48705b1050b6a372166354e |  | pins, stages, protocol, dataset md5s, what to expect from a rerun |
 | producers | requirements.txt | d0c1f51727e6abb4f258de2e85c3a36e |  | Python env of the analysis path |
 | producers | README.md | cabb464d659c82f4b846f7e8c1d1844c |  | public README |
 | producers | .gitignore | f93ca83fa165cb520203d97a46a28812 |  | build products and scratch |
